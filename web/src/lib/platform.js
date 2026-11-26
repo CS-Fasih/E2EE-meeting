@@ -88,6 +88,24 @@ export const platform = {
     if (desktop && desktop.setCallActive) desktop.setCallActive(!!on);
   },
 
+  /** Short vibration for important taps (Android only, follows system haptics setting). */
+  haptic(kind) {
+    if (android && android.haptic) {
+      try {
+        android.haptic(String(kind || 'tap'));
+      } catch {}
+    }
+  },
+
+  /** Android picture-in-picture: called with true/false when the call shrinks to a floating window. */
+  onPip(fn) {
+    window.__handshakePip = (on) => fn(!!on);
+  },
+
+  get isPhone() {
+    return !!android || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && window.innerWidth <= 720);
+  },
+
   setDarkBars(dark) {
     if (android && android.setDarkBars) android.setDarkBars(!!dark);
   },

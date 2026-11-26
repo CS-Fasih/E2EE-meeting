@@ -1,7 +1,7 @@
 {
   "name": "handshake-desktop",
   "productName": "Handshake",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Private, end-to-end encrypted video meetings. No accounts.",
   "main": "main.js",
   "author": "Handshake contributors",

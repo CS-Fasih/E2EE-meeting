@@ -8,6 +8,7 @@ import { listDevices } from '../lib/media.js';
 import { newMeetingCode } from '../lib/crypto.js';
 import { platform } from '../lib/platform.js';
 import { toast } from './overlay.js';
+import { stagger, haptic } from './motion.js';
 
 export function renderPrejoin(root, app, { mode, code }) {
   const s = app.settings;
@@ -26,6 +27,23 @@ export function renderPrejoin(root, app, { mode, code }) {
   const levelBars = h('span', { class: 'pj-level', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'));
   const micBtn = h('button', { class: 'round-btn', type: 'button' });
   const camBtn = h('button', { class: 'round-btn', type: 'button' });
+  const flipBtn = h(
+    'button',
+    {
+      class: 'round-btn round-btn-sm pj-flip',
+      type: 'button',
+      'aria-label': 'Switch camera',
+      title: 'Switch camera',
+      hidden: true,
+      onclick: async () => {
+        haptic('tap');
+        flipBtn.classList.add('spin');
+        await app.media.switchCamera();
+        flipBtn.classList.remove('spin');
+      },
+    },
+    icon('flip'),
+  );
   const note = h('p', { class: 'pj-error', hidden: true, role: 'alert' });
 
   const preview = h(
@@ -36,6 +54,7 @@ export function renderPrejoin(root, app, { mode, code }) {
     nameTag,
     levelBars,
     h('div', { class: 'pj-controls' }, micBtn, camBtn),
+    flipBtn,
   );
 
   function paint() {
@@ -50,6 +69,8 @@ export function renderPrejoin(root, app, { mode, code }) {
     micBtn.title = micBtn.getAttribute('aria-label');
     camBtn.title = camBtn.getAttribute('aria-label');
     const track = app.media.get('cam');
+    video.classList.toggle('mirrored', !!s.mirrorSelf && app.media.mirrored);
+    flipBtn.hidden = !track || !canFlip;
     if (track) {
       if (!video.srcObject || video.srcObject.getVideoTracks()[0] !== track) video.srcObject = new MediaStream([track]);
       video.hidden = false;
@@ -65,6 +86,7 @@ export function renderPrejoin(root, app, { mode, code }) {
   }
 
   micBtn.addEventListener('click', async () => {
+    haptic('tap');
     if (app.media.get('audio')) app.media.stopMic();
     else await app.media.startMic().catch(() => {});
     s.joinWithMic = !!app.media.get('audio');
@@ -72,6 +94,7 @@ export function renderPrejoin(root, app, { mode, code }) {
     paint();
   });
   camBtn.addEventListener('click', async () => {
+    haptic('tap');
     if (app.media.get('cam')) app.media.stopCam();
     else await app.media.startCam().catch(() => {});
     s.joinWithCam = !!app.media.get('cam');
@@ -109,8 +132,11 @@ export function renderPrejoin(root, app, { mode, code }) {
   const micSel = mkSelect('Microphone', 'mic');
   const spkSel = mkSelect('Speaker', 'speaker');
   const camSel = mkSelect('Camera', 'cam');
+  let canFlip = platform.isPhone;
   async function fillDevices() {
     const d = await listDevices();
+    canFlip = platform.isPhone || d.cams.length > 1;
+    flipBtn.hidden = !app.media.get('cam') || !canFlip;
     const fill = (sel, list, key, fallback) => {
       const cur = s[key];
       clear(sel).append(
@@ -254,10 +280,9 @@ export function renderPrejoin(root, app, { mode, code }) {
     ),
   );
 
-  root.append(
-    header,
-    h('main', { class: 'pj-main' }, h('section', { class: 'pj-left' }, preview, devicesRow, note), side),
-  );
+  const left = h('section', { class: 'pj-left' }, preview, devicesRow, note);
+  root.append(header, h('main', { class: 'pj-main' }, left, side));
+  stagger([left, ...form.children], { delay: 45 });
 
   // Turn devices on as they were last time.
   if (s.joinWithCam && !app.media.get('cam')) app.media.startCam().catch(() => {});
@@ -283,7 +308,7 @@ export function renderPrejoin(root, app, { mode, code }) {
         return;
       }
       clear(status).append(
-        h('span', { class: 'spinner', 'aria-hidden': 'true' }),
+        h('div', { class: 'pj-wait', 'aria-hidden': 'true' }, h('i'), h('i'), avatar(nameInput.value.trim() || '?', 'avatar avatar-lg')),
         h('h2', {}, text),
         h('p', { class: 'muted' }, mode === 'new' ? 'Setting up an encrypted meeting.' : 'Your camera and microphone stay as you set them.'),
         onCancel ? h('button', { class: 'btn btn-outlined', type: 'button', onclick: onCancel }, 'Cancel') : null,

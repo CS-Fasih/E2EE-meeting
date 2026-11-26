@@ -19,7 +19,8 @@
 - **Local recording** that saves only to your device, with a notice shown to everyone while it runs.
 - **Optional meeting password**, mixed into every key.
 - **Light and dark themes**, device selection, noise suppression and echo cancellation.
-- **Android:** blocks screenshots by default, keeps calls running in the background, speaker or earpiece.
+- **Polished motion:** smooth screen transitions, touch ripples, tiles that glide into place as people join and leave, a speaking ring around avatars, bottom sheets you can swipe away on phones.
+- **Android:** an app-style phone layout, picture-in-picture during calls, front/back camera switch, haptic feedback, screenshot blocking by default, calls keep running in the background, speaker or earpiece.
 - **Hide your IP address** from other participants by routing through your own TURN server.
 
 | | |
@@ -28,7 +29,7 @@
 | <img src="docs/screenshots/present-chat.png" alt="Screen sharing with chat"> | <img src="docs/screenshots/security.png" alt="Encryption panel with safety number"> |
 | <img src="docs/screenshots/people.png" alt="People panel with host controls"> | <img src="docs/screenshots/call-dark.png" alt="Dark theme"> |
 
-<p align="center"><img src="docs/screenshots/phone-prejoin.png" width="240" alt="Android ready-to-join screen">&nbsp;&nbsp;<img src="docs/screenshots/phone-call.png" width="240" alt="Android call"></p>
+<p align="center"><img src="docs/screenshots/phone-home.png" width="220" alt="Android start screen">&nbsp;&nbsp;<img src="docs/screenshots/phone-prejoin.png" width="220" alt="Android ready-to-join screen">&nbsp;&nbsp;<img src="docs/screenshots/phone-call.png" width="220" alt="Android call"></p>
 
 *Screenshots use a synthetic test camera.*
 
@@ -36,9 +37,9 @@
 
 | Platform | File | Notes |
 |---|---|---|
-| Windows 10/11 (64-bit) | `Handshake-Setup-1.1.0.exe` | Installs for your user only, no admin rights needed |
-| Windows, no install | `Handshake-1.1.0-portable.exe` | Runs from any folder or USB drive |
-| Android 8.0+ | `Handshake-1.1.0.apk` | Allow "Install unknown apps" for your browser or file manager |
+| Windows 10/11 (64-bit) | `Handshake-Setup-1.2.0.exe` | Installs for your user only, no admin rights needed |
+| Windows, no install | `Handshake-1.2.0-portable.exe` | Runs from any folder or USB drive |
+| Android 8.0+ | `Handshake-1.2.0.apk` | Allow "Install unknown apps" for your browser or file manager |
 
 Get them from the [Releases page](https://github.com/CS-Fasih/E2EE-meeting/releases), or build them yourself (below). The Windows builds are not code-signed, so SmartScreen may warn the first time: choose **More info → Run anyway**.
 
@@ -117,7 +118,7 @@ keyAlias=handshake
 keyPassword=...
 ```
 
-**Automatic builds**: `.github/workflows/build.yml` runs the browser tests and builds the Windows and Android apps on every push. When you publish a release on GitHub with a `v…` tag (for example `v1.1.0`), the same workflow attaches the `.exe` and `.apk` files to it. To have CI sign the APK with your key (so updates install over earlier versions), add these repository secrets: `ANDROID_KEYSTORE_BASE64` (the output of `base64 -w0 your-release.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Without them, CI signs with a debug key.
+**Automatic builds**: `.github/workflows/build.yml` runs the browser tests and builds the Windows and Android apps on every push. When you publish a release on GitHub with a `v…` tag (for example `v1.2.0`), the same workflow attaches the `.exe` and `.apk` files to it. To have CI sign the APK with your key (so updates install over earlier versions), add these repository secrets: `ANDROID_KEYSTORE_BASE64` (the output of `base64 -w0 your-release.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Without them, CI signs with a debug key.
 
 **Tests**: three real browsers, a local relay and fake cameras:
 

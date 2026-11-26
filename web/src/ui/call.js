@@ -11,6 +11,7 @@ import { chatPanel } from './panel-chat.js';
 import { securityPanel } from './panel-security.js';
 import { chime } from './sound.js';
 import { avatar, paintAvatar } from './avatar.js';
+import { measure, leave, haptic, reduced, EASE, dragToDismiss } from './motion.js';
 
 const SPEAK_THRESHOLD = 0.018;
 
@@ -94,7 +95,31 @@ export function renderCall(root, app, meeting) {
     h('div', { class: 'callbar-right' }, peopleBtn, chatBtn),
   );
 
-  root.append(h('div', { class: 'call-body' }, stage, panel), notices, reactionLayer, bar, audioBox);
+  // Phones: a slim top bar with the meeting, camera flip and speaker.
+  const flipBtn = h(
+    'button',
+    { class: 'icon-btn top-btn', type: 'button', 'aria-label': 'Switch camera', title: 'Switch camera', onclick: () => flipCamera() },
+    icon('flip'),
+  );
+  const speakerBtn = platform.hasSpeakerToggle
+    ? h('button', { class: 'icon-btn top-btn', type: 'button', 'aria-label': 'Speaker', title: 'Speaker', onclick: () => toggleSpeaker() }, icon('speaker'))
+    : null;
+  const topBar = h(
+    'div',
+    { class: 'call-top' },
+    h(
+      'button',
+      { class: 'call-top-title', type: 'button', onclick: () => togglePanel('security'), 'aria-label': 'Encryption details' },
+      h('strong', {}, 'Handshake meeting'),
+      h('span', {}, icon('lock'), h('span', {}, 'End-to-end encrypted')),
+    ),
+    h('div', { class: 'call-top-actions' }, speakerBtn, flipBtn),
+  );
+  const scrim = h('div', { class: 'panel-scrim', hidden: true, onclick: () => closePanel() });
+  let pipMode = false;
+  let layoutDirty = true;
+
+  root.append(topBar, h('div', { class: 'call-body' }, stage, panel), scrim, notices, reactionLayer, bar, audioBox);
 
   // ---- panels ----
   const panels = {
@@ -106,8 +131,11 @@ export function renderCall(root, app, meeting) {
   function togglePanel(name) {
     if (panelName === name) return closePanel();
     if (panelName) panels[panelName].hide();
+    const wasOpen = !!panelName;
     panelName = name;
+    const handle = h('div', { class: 'sheet-handle panel-handle', 'aria-hidden': 'true' }, h('span'));
     clear(panel).append(
+      handle,
       h(
         'div',
         { class: 'panel-head' },
@@ -116,7 +144,13 @@ export function renderCall(root, app, meeting) {
       ),
       panels[name].el,
     );
+    dragToDismiss(panel, handle, () => closePanel());
+    panel.style.transform = '';
+    panel.classList.remove('closing');
     panel.hidden = false;
+    scrim.hidden = false;
+    if (!wasOpen) panel.classList.add('opening');
+    panel.addEventListener('animationend', () => panel.classList.remove('opening'), { once: true });
     root.classList.add('with-panel');
     panels[name].show();
     if (name === 'chat') {
@@ -132,8 +166,21 @@ export function renderCall(root, app, meeting) {
   function closePanel() {
     if (panelName) panels[panelName].hide();
     panelName = null;
-    panel.hidden = true;
-    root.classList.remove('with-panel');
+    scrim.hidden = true;
+    const finish = () => {
+      if (panelName) return; // reopened meanwhile
+      panel.hidden = true;
+      panel.classList.remove('closing');
+      panel.style.transform = '';
+      root.classList.remove('with-panel');
+      requestAnimationFrame(doLayout);
+    };
+    if (reduced()) finish();
+    else {
+      panel.classList.add('closing');
+      panel.addEventListener('animationend', finish, { once: true });
+      setTimeout(finish, 320);
+    }
     peopleBtn.classList.remove('active');
     chatBtn.classList.remove('active');
     secureBtn.classList.remove('active');
@@ -194,6 +241,10 @@ export function renderCall(root, app, meeting) {
       hand,
     );
     const tile = { ...spec, el, video, avatar: avatarBox, circle, name, micIco, hand, status, pinBtn, track: null };
+    if (!reduced()) {
+      el.classList.add('tile-in');
+      el.addEventListener('animationend', () => el.classList.remove('tile-in'), { once: true });
+    }
     pinBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       pin(pinned === spec.key ? null : spec.key);
@@ -217,7 +268,7 @@ export function renderCall(root, app, meeting) {
     if (tile.self) {
       const track = media.get(tile.slot);
       setVideo(tile, track, !!track);
-      tile.video.classList.toggle('mirrored', tile.slot === 'cam' && s.mirrorSelf);
+      tile.video.classList.toggle('mirrored', tile.slot === 'cam' && s.mirrorSelf && media.mirrored);
       tile.name.textContent = tile.slot === 'screen' ? 'You are presenting' : 'You';
       paintAvatar(tile.circle, meeting.name);
       tile.micIco.hidden = tile.slot === 'screen' || !!media.get('audio');
@@ -244,10 +295,10 @@ export function renderCall(root, app, meeting) {
     const keys = new Set(specs.map((x) => x.key));
     for (const [key, tile] of tiles) {
       if (!keys.has(key)) {
-        tile.video.srcObject = null;
-        tile.el.remove();
+        retire(tile);
         tiles.delete(key);
         if (pinned === key) pinned = null;
+        layoutDirty = true;
       }
     }
     for (const spec of specs) {
@@ -255,6 +306,7 @@ export function renderCall(root, app, meeting) {
       if (!tile) {
         tile = makeTile(spec);
         tiles.set(spec.key, tile);
+        layoutDirty = true;
       } else if (spec.p) tile.p = spec.p;
       paintTile(tile);
     }
@@ -301,6 +353,15 @@ export function renderCall(root, app, meeting) {
   // ---- layout ----
   function currentLayout(list) {
     const screens = list.filter((t) => t.slot === 'screen');
+    if (pipMode) {
+      // Floating window: only the most relevant person.
+      const main =
+        screens.find((t) => !t.self) ||
+        (activeSpeaker && tiles.get(activeSpeaker + ':cam')) ||
+        list.find((t) => !t.self) ||
+        list[0];
+      return { mode: 'spotlight', main };
+    }
     if (pinned && tiles.has(pinned)) return { mode: 'spotlight', main: tiles.get(pinned) };
     if (layout === 'grid') return { mode: list.length === 2 ? 'duo' : 'grid' };
     if (screens.length) return { mode: 'spotlight', main: screens.find((t) => !t.self) || screens[0] };
@@ -313,6 +374,29 @@ export function renderCall(root, app, meeting) {
   }
 
   function doLayout() {
+    // Glide tiles to their new places when people join, leave or the view changes.
+    const finish = layoutDirty ? measure([...tiles.values()].map((t) => t.el)) : null;
+    layoutDirty = false;
+    applyLayout();
+    if (finish) finish();
+  }
+
+  function retire(tile) {
+    const r = tile.el.getBoundingClientRect();
+    const sr = stage.getBoundingClientRect();
+    tile.el.classList.add('tile-leaving');
+    tile.el.style.position = 'absolute';
+    tile.el.style.left = r.left - sr.left + 'px';
+    tile.el.style.top = r.top - sr.top + 'px';
+    tile.el.style.width = r.width + 'px';
+    tile.el.style.height = r.height + 'px';
+    stage.appendChild(tile.el);
+    leave(tile.el, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.9)' }], 220).then(() => {
+      tile.video.srcObject = null;
+    });
+  }
+
+  function applyLayout() {
     const list = [...tiles.values()];
     const L = currentLayout(list);
     stage.dataset.layout = L.mode;
@@ -361,6 +445,7 @@ export function renderCall(root, app, meeting) {
 
   function pin(key) {
     pinned = key;
+    layoutDirty = true;
     for (const t of tiles.values()) t.el.classList.toggle('pinned', pinned === t.key);
     doLayout();
   }
@@ -429,7 +514,17 @@ export function renderCall(root, app, meeting) {
     chatBadge.textContent = unread > 9 ? '9+' : String(unread);
   }
 
+  async function flipCamera() {
+    haptic('tap');
+    if (!media.get('cam')) return toast('Turn on your camera first.');
+    flipBtn.classList.add('spin');
+    const ok = await media.switchCamera();
+    flipBtn.classList.remove('spin');
+    if (!ok) toast('This device has only one camera.');
+  }
+
   async function toggleMic() {
+    haptic('tap');
     if (media.get('audio')) media.stopMic();
     else {
       try {
@@ -442,6 +537,7 @@ export function renderCall(root, app, meeting) {
   }
 
   async function toggleCam() {
+    haptic('tap');
     if (media.get('cam')) media.stopCam();
     else {
       try {
@@ -472,7 +568,7 @@ export function renderCall(root, app, meeting) {
       'div',
       { class: 'reactions' },
       REACTIONS.map((e) =>
-        h('button', { class: 'reaction-btn', type: 'button', 'aria-label': 'React ' + e, onclick: () => meeting.react(e) }, e),
+        h('button', { class: 'reaction-btn', type: 'button', 'aria-label': 'React ' + e, onclick: () => (haptic('tap'), meeting.react(e)) }, e),
       ),
     );
     popover(anchor, row, { autoclose: true });
@@ -493,7 +589,7 @@ export function renderCall(root, app, meeting) {
         ? { label: recorder ? 'Stop recording' : 'Record on this device', icon: 'record', run: () => toggleRecording() }
         : null,
       platform.canPip ? { label: 'Picture in picture', icon: 'pip', run: () => startPip() } : null,
-      document.fullscreenEnabled ? { label: document.fullscreenElement ? 'Exit full screen' : 'Full screen', icon: 'expand', run: () => toggleFullscreen() } : null,
+      document.fullscreenEnabled && platform.kind !== 'android' ? { label: document.fullscreenElement ? 'Exit full screen' : 'Full screen', icon: 'expand', run: () => toggleFullscreen() } : null,
       platform.hasSpeakerToggle ? { label: speakerOn ? 'Use earpiece' : 'Use speaker', icon: speakerOn ? 'earpiece' : 'speaker', run: () => toggleSpeaker() } : null,
       '-',
       { label: 'Settings', icon: 'gear', run: () => app.openSettings() },
@@ -504,6 +600,7 @@ export function renderCall(root, app, meeting) {
 
   function setLayout(l) {
     layout = l;
+    layoutDirty = true;
     pinned = null;
     doLayout();
   }
@@ -514,8 +611,10 @@ export function renderCall(root, app, meeting) {
   }
 
   function toggleSpeaker() {
+    haptic('tap');
     speakerOn = !speakerOn;
     platform.setSpeaker(speakerOn);
+    if (speakerBtn) speakerBtn.replaceChild(icon(speakerOn ? 'speaker' : 'earpiece'), speakerBtn.firstChild);
     toast(speakerOn ? 'Sound is coming from the speaker.' : 'Sound is coming from the earpiece.');
   }
 
@@ -612,6 +711,7 @@ export function renderCall(root, app, meeting) {
   }
 
   function onLeave() {
+    haptic('confirm');
     const others = meeting.connected.length > 0;
     if (meeting.isHost && others) {
       menu(leaveBtn, [
@@ -624,29 +724,45 @@ export function renderCall(root, app, meeting) {
   }
 
   // ---- notices: people asking to join, recording ----
+  const noticeNodes = new Map(); // key -> element, so only new notices animate in
   function paintNotices() {
-    clear(notices);
+    const wanted = new Map();
     if (meeting.isHost) {
       for (const k of meeting.knocks.values()) {
-        notices.appendChild(
+        wanted.set('k:' + k.id, () =>
           h(
             'div',
             { class: 'notice notice-knock' },
             avatar(k.name, 'avatar avatar-md'),
             h('div', { class: 'notice-text' }, h('strong', {}, k.name), h('span', {}, 'wants to join this call')),
             h('button', { class: 'btn btn-text btn-small', type: 'button', onclick: () => meeting.deny(k.id) }, 'Deny'),
-            h('button', { class: 'btn btn-primary btn-small', type: 'button', onclick: () => meeting.admit(k.id) }, 'Admit'),
+            h('button', { class: 'btn btn-primary btn-small', type: 'button', onclick: () => (haptic('confirm'), meeting.admit(k.id)) }, 'Admit'),
           ),
         );
       }
     }
     const recorders = [...meeting.participants.values()].filter((p) => p.status === 'connected' && p.state.recording).map((p) => p.name);
     if (recorder) recorders.unshift('You');
+    let recText = '';
     if (recorders.length) {
       const who = recorders.length === 1 ? recorders[0] : recorders.slice(0, -1).join(', ') + ' and ' + recorders[recorders.length - 1];
-      notices.appendChild(
-        h('div', { class: 'notice notice-rec' }, h('span', { class: 'rec-dot' }), h('span', {}, `${who} ${recorders.length === 1 && who !== 'You' ? 'is' : 'are'} recording this meeting`)),
-      );
+      recText = `${who} ${recorders.length === 1 && who !== 'You' ? 'is' : 'are'} recording this meeting`;
+      wanted.set('rec', () => h('div', { class: 'notice notice-rec' }, h('span', { class: 'rec-dot' }), h('span', { class: 'rec-text' })));
+    }
+    for (const [key, node] of noticeNodes) {
+      if (!wanted.has(key)) {
+        noticeNodes.delete(key);
+        leave(node, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-8px)' }], 160);
+      }
+    }
+    for (const [key, make] of wanted) {
+      let node = noticeNodes.get(key);
+      if (!node) {
+        node = make();
+        noticeNodes.set(key, node);
+        notices.appendChild(node);
+      }
+      if (key === 'rec') node.querySelector('.rec-text').textContent = recText;
     }
   }
 
@@ -661,7 +777,10 @@ export function renderCall(root, app, meeting) {
       const smooth = Math.max(v, prev * 0.7);
       levels.set(key, smooth);
       const t = tiles.get(tileKey);
-      if (t) t.el.classList.toggle('speaking', smooth > SPEAK_THRESHOLD);
+      if (t) {
+        t.el.classList.toggle('speaking', smooth > SPEAK_THRESHOLD);
+        t.el.style.setProperty('--lvl', Math.min(1, smooth * 9).toFixed(2));
+      }
       if (smooth > loudestLevel) {
         loudestLevel = smooth;
         loudest = tileKey.split(':')[0];
@@ -686,7 +805,7 @@ export function renderCall(root, app, meeting) {
   function floatReaction(emoji, who) {
     const node = h(
       'div',
-      { class: 'reaction-float', style: { left: 10 + Math.random() * 30 + '%' } },
+      { class: 'reaction-float', style: { left: 6 + Math.random() * 34 + '%', '--sway': (Math.random() > 0.5 ? 1 : -1) * (12 + Math.random() * 18) + 'px' } },
       h('span', { class: 'reaction-emoji' }, emoji),
       h('span', { class: 'reaction-who' }, who),
     );
@@ -802,6 +921,14 @@ export function renderCall(root, app, meeting) {
     }
   };
   document.addEventListener('keydown', onKey);
+
+  // Android picture-in-picture: show just the main person in the floating window.
+  platform.onPip((on) => {
+    pipMode = on;
+    root.classList.toggle('pip', on);
+    if (on && panelName) closePanel();
+    doLayout();
+  });
 
   platform.onBack(() => {
     if (panelName) {

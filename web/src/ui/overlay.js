@@ -1,7 +1,10 @@
-// Toasts, dialogs and pop-up menus.
+// Toasts, dialogs, menus and bottom sheets, with enter and exit motion.
 
 import { h, clear } from './dom.js';
 import { icon } from './icons.js';
+import { leave, dragToDismiss, reduced } from './motion.js';
+
+const isNarrow = () => window.innerWidth <= 720;
 
 let toastRoot;
 
@@ -10,6 +13,13 @@ export function toast(text, opts = {}) {
     toastRoot = h('div', { class: 'toasts', role: 'status', 'aria-live': 'polite' });
     document.body.appendChild(toastRoot);
   }
+  const dismiss = () => {
+    if (!node.isConnected || node.classList.contains('out')) return;
+    node.classList.add('out');
+    if (reduced()) node.remove();
+    else node.addEventListener('animationend', () => node.remove(), { once: true });
+    setTimeout(() => node.remove(), 400);
+  };
   const node = h(
     'div',
     { class: 'toast' + (opts.kind ? ' toast-' + opts.kind : '') },
@@ -21,7 +31,7 @@ export function toast(text, opts = {}) {
             class: 'btn btn-quiet btn-small',
             onclick: () => {
               opts.action.run();
-              node.remove();
+              dismiss();
             },
           },
           opts.action.label,
@@ -29,9 +39,10 @@ export function toast(text, opts = {}) {
       : null,
   );
   toastRoot.appendChild(node);
-  const max = window.innerWidth <= 720 ? 2 : 3;
-  while (toastRoot.children.length > max) toastRoot.firstChild.remove();
-  setTimeout(() => node.remove(), opts.timeout || 4500);
+  const live = [...toastRoot.children].filter((n) => !n.classList.contains('out'));
+  const max = isNarrow() ? 2 : 3;
+  live.slice(0, Math.max(0, live.length - max)).forEach((n) => n.remove());
+  setTimeout(dismiss, opts.timeout || 4500);
   return node;
 }
 
@@ -40,13 +51,21 @@ let openDialog = null;
 export function dialog({ title, body, actions = [], wide = false, onClose, dismissable = true }) {
   closeDialog();
   const previous = document.activeElement;
+  let closing = false;
   const close = () => {
-    if (!backdrop.isConnected) return;
-    backdrop.remove();
+    if (closing || !backdrop.isConnected) return;
+    closing = true;
     document.removeEventListener('keydown', onKey, true);
     if (openDialog === api) openDialog = null;
+    backdrop.classList.add('closing');
+    const done = () => backdrop.remove();
+    if (reduced()) done();
+    else {
+      box.addEventListener('animationend', done, { once: true });
+      setTimeout(done, 300);
+    }
     if (onClose) onClose();
-    if (previous && previous.focus) previous.focus();
+    if (previous && previous.focus && previous.isConnected) previous.focus();
   };
   const onKey = (e) => {
     if (e.key === 'Escape' && dismissable) {
@@ -106,6 +125,57 @@ export function closeDialog() {
   if (openDialog) openDialog.close();
 }
 
+/**
+ * Bottom sheet (phones). Slides up, can be dragged down to close.
+ */
+export function sheet({ title, body, onClose, className = '' }) {
+  closeMenu();
+  const previous = document.activeElement;
+  let closing = false;
+  const handle = h('div', { class: 'sheet-handle', 'aria-hidden': 'true' }, h('span'));
+  const box = h(
+    'div',
+    { class: 'sheet ' + className, role: 'dialog', 'aria-modal': 'true', 'aria-label': title || 'Options', tabindex: '-1' },
+    handle,
+    title ? h('h2', { class: 'sheet-title' }, title) : null,
+    h('div', { class: 'sheet-body' }, body),
+  );
+  const scrim = h('div', { class: 'sheet-scrim' });
+  const close = () => {
+    if (closing) return;
+    closing = true;
+    document.removeEventListener('keydown', onKey, true);
+    scrim.classList.add('closing');
+    box.classList.add('closing');
+    const done = () => {
+      scrim.remove();
+      box.remove();
+    };
+    if (reduced()) done();
+    else {
+      box.addEventListener('animationend', done, { once: true });
+      setTimeout(done, 350);
+    }
+    if (onClose) onClose();
+    if (previous && previous.focus && previous.isConnected) previous.focus();
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      close();
+    }
+  };
+  scrim.addEventListener('click', close);
+  document.addEventListener('keydown', onKey, true);
+  document.body.append(scrim, box);
+  dragToDismiss(box, handle, close);
+  const first = box.querySelector('input, .sheet-body button');
+  setTimeout(() => (first && first.tagName === 'INPUT' ? first : box).focus(), 0);
+  const api = { close, box };
+  openMenu = api;
+  return api;
+}
+
 let openMenu = null;
 
 /**
@@ -114,14 +184,14 @@ let openMenu = null;
  */
 export function menu(anchor, items, { align = 'center', above = true } = {}) {
   closeMenu();
-  const list = h('div', { class: 'menu', role: 'menu' });
+  const buttons = [];
   for (const it of items) {
     if (it === '-') {
-      list.appendChild(h('div', { class: 'menu-sep', role: 'separator' }));
+      buttons.push(h('div', { class: 'menu-sep', role: 'separator' }));
       continue;
     }
     if (!it) continue;
-    list.appendChild(
+    buttons.push(
       h(
         'button',
         {
@@ -139,6 +209,11 @@ export function menu(anchor, items, { align = 'center', above = true } = {}) {
       ),
     );
   }
+  // On phones, options open as a bottom sheet like native apps.
+  if (isNarrow()) {
+    return sheet({ body: h('div', { class: 'sheet-menu', role: 'menu' }, buttons) });
+  }
+  const list = h('div', { class: 'menu', role: 'menu' }, buttons);
   document.body.appendChild(list);
   const r = anchor.getBoundingClientRect();
   const mw = list.offsetWidth;
@@ -146,10 +221,18 @@ export function menu(anchor, items, { align = 'center', above = true } = {}) {
   let left = align === 'end' ? r.right - mw : align === 'start' ? r.left : r.left + r.width / 2 - mw / 2;
   left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
   let top = above ? r.top - mh - 8 : r.bottom + 8;
-  if (top < 8) top = r.bottom + 8;
-  if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 8);
+  let fromBelow = above;
+  if (top < 8) {
+    top = r.bottom + 8;
+    fromBelow = false;
+  }
+  if (top + mh > window.innerHeight - 8) {
+    top = Math.max(8, r.top - mh - 8);
+    fromBelow = true;
+  }
   list.style.left = left + 'px';
   list.style.top = top + 'px';
+  list.style.transformOrigin = `${Math.min(mw, Math.max(0, r.left + r.width / 2 - left))}px ${fromBelow ? '100%' : '0'}`;
   const onDown = (e) => {
     if (!list.contains(e.target) && !anchor.contains(e.target)) closeMenu();
   };
@@ -165,10 +248,10 @@ export function menu(anchor, items, { align = 'center', above = true } = {}) {
   if (first) first.focus();
   openMenu = {
     close() {
-      list.remove();
       document.removeEventListener('mousedown', onDown, true);
       document.removeEventListener('touchstart', onDown, true);
       document.removeEventListener('keydown', onKey, true);
+      leave(list, [{ opacity: 1 }, { opacity: 0, transform: 'scale(0.96)' }], 120);
       if (anchor.focus) anchor.focus();
     },
     list,
@@ -191,8 +274,10 @@ export function popover(anchor, content, opts = {}) {
   const r = anchor.getBoundingClientRect();
   const w = box.offsetWidth;
   const ht = box.offsetHeight;
-  box.style.left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8)) + 'px';
+  const left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8));
+  box.style.left = left + 'px';
   box.style.top = Math.max(8, r.top - ht - 8) + 'px';
+  box.style.transformOrigin = `${r.left + r.width / 2 - left}px 100%`;
   const onDown = (e) => {
     if (!box.contains(e.target) && !anchor.contains(e.target)) closeMenu();
   };
@@ -203,9 +288,9 @@ export function popover(anchor, content, opts = {}) {
   document.addEventListener('keydown', onKey, true);
   openMenu = {
     close() {
-      box.remove();
       document.removeEventListener('mousedown', onDown, true);
       document.removeEventListener('keydown', onKey, true);
+      leave(box, [{ opacity: 1 }, { opacity: 0, transform: 'scale(0.94)' }], 120);
     },
     list: box,
   };

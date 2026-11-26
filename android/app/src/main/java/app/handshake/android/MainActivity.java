@@ -2,6 +2,7 @@ package app.handshake.android;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.PictureInPictureParams;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentResolver;
@@ -11,6 +12,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -19,6 +21,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.util.Rational;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
@@ -114,6 +118,9 @@ public class MainActivity extends Activity {
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setSafeBrowsingEnabled(false);
         s.setSupportZoom(false);
+        // Follow the system font size, but cap it so the layout stays intact.
+        float scale = getResources().getConfiguration().fontScale;
+        s.setTextZoom(Math.round(100 * Math.max(0.9f, Math.min(scale, 1.15f))));
 
         web.addJavascriptInterface(new Bridge(), "HandshakeAndroid");
         web.setWebViewClient(new Client());
@@ -148,6 +155,35 @@ public class MainActivity extends Activity {
         web.evaluateJavascript("window.__handshakeBack ? window.__handshakeBack() : false", value -> {
             if (!"true".equals(value)) moveTaskToBack(true);
         });
+    }
+
+    // ---------------------------------------------------------------- picture-in-picture
+
+    private PictureInPictureParams pipParams(boolean autoEnter) {
+        PictureInPictureParams.Builder b = new PictureInPictureParams.Builder().setAspectRatio(new Rational(3, 4));
+        if (Build.VERSION.SDK_INT >= 31) {
+            b.setAutoEnterEnabled(autoEnter);
+            b.setSeamlessResizeEnabled(false);
+        }
+        return b.build();
+    }
+
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        // Android 8-11: shrink the call into a floating window when leaving the app.
+        if (inCall && Build.VERSION.SDK_INT < 31) {
+            try {
+                enterPictureInPictureMode(pipParams(true));
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean inPip, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(inPip, newConfig);
+        if (web != null) web.evaluateJavascript("window.__handshakePip && window.__handshakePip(" + inPip + ")", null);
     }
 
     @Override
@@ -372,6 +408,16 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void haptic(String kind) {
+            runOnUiThread(() -> {
+                if (web == null) return;
+                int type = HapticFeedbackConstants.KEYBOARD_TAP;
+                if ("confirm".equals(kind)) type = Build.VERSION.SDK_INT >= 30 ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.LONG_PRESS;
+                web.performHapticFeedback(type);
+            });
+        }
+
+        @JavascriptInterface
         public void setDarkBars(boolean dark) {
             runOnUiThread(() -> applyBars(dark));
         }
@@ -389,6 +435,13 @@ public class MainActivity extends Activity {
         public void setCallActive(boolean on) {
             runOnUiThread(() -> {
                 inCall = on;
+                // Android 12+: go into a floating window automatically during calls.
+                if (Build.VERSION.SDK_INT >= 31) {
+                    try {
+                        setPictureInPictureParams(pipParams(on));
+                    } catch (Exception ignored) {
+                    }
+                }
                 Intent svc = new Intent(MainActivity.this, CallService.class);
                 if (on) {
                     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

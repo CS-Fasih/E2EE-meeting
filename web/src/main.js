@@ -12,6 +12,8 @@ import { Meeting } from './lib/meeting.js';
 import { loadSettings, saveSettings, iceServers } from './lib/settings.js';
 import { parseMeetingCode } from './lib/crypto.js';
 import { platform } from './lib/platform.js';
+import { installRipple, swapView, reduced } from './ui/motion.js';
+import { LOGO_SVG } from './ui/brand.js';
 
 const root = document.getElementById('app');
 const settings = loadSettings();
@@ -51,6 +53,18 @@ function applyTheme() {
   platform.setDarkBars(dark);
 }
 applyTheme();
+installRipple();
+
+// A short launch animation, as in native apps. It never blocks taps.
+if (!reduced()) {
+  const splash = h('div', { class: 'splash', 'aria-hidden': 'true' }, h('span', { class: 'splash-logo', html: LOGO_SVG }), h('span', { class: 'splash-name' }, 'Handshake'));
+  document.body.appendChild(splash);
+  setTimeout(() => {
+    splash.classList.add('done');
+    splash.addEventListener('animationend', () => splash.remove(), { once: true });
+    setTimeout(() => splash.remove(), 800);
+  }, 650);
+}
 if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', applyTheme);
 
 // Opt-in hook for automated tests only (set by the test harness on this device).
@@ -66,7 +80,7 @@ function showHome() {
   closeDialog();
   // The landing page never needs the camera or microphone.
   media.stopAll();
-  app.view = renderHome(root, app);
+  swapView(() => (app.view = renderHome(root, app)));
   platform.onBack(() => false);
   return app.view;
 }
@@ -74,7 +88,7 @@ function showHome() {
 function showPrejoin({ mode, code }) {
   if (app.view && app.view.destroy) app.view.destroy();
   closeDialog();
-  app.view = renderPrejoin(root, app, { mode, code });
+  swapView(() => (app.view = renderPrejoin(root, app, { mode, code })));
   platform.onBack(() => {
     if (app.meeting) leaveMeeting();
     else showHome();
@@ -149,7 +163,7 @@ function joinMeeting({ code, name, password }) {
 function enterCall(m) {
   if (app.view && app.view.destroy) app.view.destroy();
   closeDialog();
-  app.view = renderCall(root, app, m);
+  swapView(() => (app.view = renderCall(root, app, m)));
   platform.setCallActive(true);
 }
 
@@ -170,6 +184,7 @@ function endScreen(m, phase) {
   app.view = null;
   clear(root);
   root.className = 'view view-end';
+  swapView(() => {});
   const canRejoin = phase === 'left' || phase === 'denied' || phase === 'locked' || phase === 'full';
   root.append(
     h(

@@ -17,6 +17,7 @@ export class LocalMedia extends EventTarget {
     this.wantMic = true;
     this.wantCam = true;
     this.lastError = null;
+    this.facing = 'user'; // which way the camera points, for mirroring
   }
 
   get(slot) {
@@ -84,6 +85,8 @@ export class LocalMedia extends EventTarget {
     try {
       const s = await navigator.mediaDevices.getUserMedia({ video: this.videoConstraints() });
       const track = s.getVideoTracks()[0];
+      const fm = track.getSettings ? track.getSettings().facingMode : null;
+      this.facing = fm || 'user';
       track.contentHint = 'motion';
       track.addEventListener('ended', () => {
         if (this.tracks.cam === track) this._set('cam', null);
@@ -102,6 +105,48 @@ export class LocalMedia extends EventTarget {
   stopCam() {
     this.wantCam = false;
     this._set('cam', null);
+  }
+
+  /** Switches between front and back camera (or to the next camera). */
+  async switchCamera() {
+    const cur = this.tracks.cam;
+    const st = cur && cur.getSettings ? cur.getSettings() : {};
+    const { cams } = await listDevices();
+    const base = this.videoConstraints();
+    delete base.deviceId;
+    delete base.facingMode;
+    let constraints;
+    let nextFacing = this.facing;
+    if (st.facingMode || cams.length <= 2) {
+      nextFacing = (st.facingMode || this.facing) === 'environment' ? 'user' : 'environment';
+      constraints = { ...base, facingMode: { exact: nextFacing } };
+    } else {
+      const i = cams.findIndex((d) => d.deviceId === st.deviceId);
+      const next = cams[(i + 1) % cams.length];
+      constraints = { ...base, deviceId: { exact: next.deviceId } };
+    }
+    // Phones cannot open two cameras at once: release the current one first.
+    this._set('cam', null);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: constraints });
+      const track = s.getVideoTracks()[0];
+      const got = track.getSettings ? track.getSettings().facingMode : null;
+      this.facing = got || nextFacing;
+      track.contentHint = 'motion';
+      track.addEventListener('ended', () => {
+        if (this.tracks.cam === track) this._set('cam', null);
+      });
+      this._set('cam', track);
+      return true;
+    } catch {
+      this.facing = 'user';
+      await this.startCam().catch(() => {});
+      return false;
+    }
+  }
+
+  get mirrored() {
+    return this.facing !== 'environment';
   }
 
   /** Restart whichever devices are on, e.g. after picking a different one. */

@@ -56,12 +56,13 @@ import tune from '@material-symbols/svg-400/rounded/tune.svg?raw';
 import groupOff from '@material-symbols/svg-400/rounded/group_off.svg?raw';
 import person from '@material-symbols/svg-400/rounded/person-fill.svg?raw';
 import schedule from '@material-symbols/svg-400/rounded/schedule.svg?raw';
+import flip from '@material-symbols/svg-400/rounded/cameraswitch.svg?raw';
 
 const raw = {
   mic, micOff, cam, camOff, screen, screenOff, hand, handFill, smile, more, leave, info, lock, unlock, chat, people,
   gear, copy, share, record, pin, pinFill, pip, clip, send, close, check, grid, spotlight, expand, keyboard,
   download, speaker, earpiece, warn, user, verified, shield, handshake, newMeeting, link, back, chevron, door,
-  devices, dark, light, help, addPerson, network, palette, privacy, tune, groupOff, person, schedule,
+  devices, dark, light, help, addPerson, network, palette, privacy, tune, groupOff, person, schedule, flip,
 };
 
 const cleaned = {};
