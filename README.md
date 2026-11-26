@@ -115,6 +115,8 @@ keyAlias=baithak
 keyPassword=...
 ```
 
+**Automatic builds** — `.github/workflows/build.yml` runs the browser tests and builds the Windows and Android apps on every push to `main`. When you publish a release on GitHub with a `v…` tag (for example `v1.0.1`), the same workflow attaches the `.exe` and `.apk` files to it. To have CI sign the APK with your key (so updates install over earlier versions), add these repository secrets: `ANDROID_KEYSTORE_BASE64` (the output of `base64 -w0 your-release.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Without them, CI signs with a debug key.
+
 **Tests** — three real browsers, a local relay and fake cameras:
 
 ```bash

@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'ccr-*']
     tags: ['v*']
   pull_request:
   workflow_dispatch:
