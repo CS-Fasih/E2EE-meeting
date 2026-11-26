@@ -1,0 +1,68 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Release signing comes from environment variables or keystore.properties
+// (never committed). Without them, the release build falls back to unsigned.
+def ksProps = new Properties()
+def ksFile = rootProject.file('keystore.properties')
+if (ksFile.exists()) ksFile.withInputStream { ksProps.load(it) }
+def ksPath = System.getenv('BAITHAK_KEYSTORE') ?: ksProps.getProperty('storeFile')
+
+android {
+    namespace 'app.baithak.android'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'app.baithak.android'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    signingConfigs {
+        release {
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword System.getenv('BAITHAK_KEYSTORE_PASSWORD') ?: ksProps.getProperty('storePassword')
+                keyAlias System.getenv('BAITHAK_KEY_ALIAS') ?: ksProps.getProperty('keyAlias')
+                keyPassword System.getenv('BAITHAK_KEY_PASSWORD') ?: ksProps.getProperty('keyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (ksPath) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    dependenciesInfo {
+        // Do not embed the dependency metadata block that only Google Play can read.
+        includeInApk = false
+        includeInBundle = false
+    }
+
+    packaging {
+        resources.excludes += ['META-INF/*.version', 'META-INF/*.kotlin_module']
+    }
+}
+
+// The app's interface is the same web app as the desktop version, bundled
+// inside the APK. Build it first with: (cd ../web && npm ci && npm run build)
+tasks.register('copyWebApp', Copy) {
+    def dist = rootProject.file('../web/dist')
+    onlyIf { dist.exists() }
+    from dist
+    into file('src/main/assets/www')
+}
+preBuild.dependsOn copyWebApp

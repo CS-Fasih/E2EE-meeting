@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Arch doorway with a turmeric lattice star, drawn in the 1024-unit space of the desktop icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.082"
+        android:scaleY="0.082"
+        android:translateX="12.02"
+        android:translateY="10.38">
+        <path
+            android:fillColor="#161A33"
+            android:pathData="M292,868V470C292,330 410,236 512,196C614,236 732,330 732,470V868Z" />
+        <path
+            android:strokeColor="#2C356D"
+            android:strokeWidth="6"
+            android:pathData="M353,330V860M406,290V860M459,250V860M512,230V860M565,250V860M618,290V860M671,330V860M300,433H724M300,486H724M300,539H724M300,592H724M300,645H724M300,698H724M300,751H724M300,804H724" />
+        <path
+            android:strokeColor="#F1EFE6"
+            android:strokeWidth="40"
+            android:strokeLineJoin="round"
+            android:strokeLineCap="round"
+            android:pathData="M292,868V470C292,330 410,236 512,196C614,236 732,330 732,470V868" />
+        <path
+            android:strokeColor="#E6B43D"
+            android:strokeWidth="30"
+            android:strokeLineJoin="round"
+            android:pathData="M436,512H588V664H436Z M512,480L620,588L512,696L404,588Z" />
+        <path
+            android:strokeColor="#F1EFE6"
+            android:strokeWidth="40"
+            android:strokeLineCap="round"
+            android:pathData="M232,868H792" />
+    </group>
+</vector>

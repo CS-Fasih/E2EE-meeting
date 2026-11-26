@@ -1,0 +1,11 @@
+{
+  "name": "baithak-tests",
+  "private": true,
+  "description": "Browser tests: three real Chromium instances, a local relay and fake cameras.",
+  "scripts": {
+    "e2e": "node e2e.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.65.1"
+  }
+}

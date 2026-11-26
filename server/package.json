@@ -1,0 +1,20 @@
+{
+  "name": "baithak-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Forward-only ephemeral Nostr relay for Baithak. Stores nothing.",
+  "type": "module",
+  "main": "relay.js",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "scripts": {
+    "start": "node relay.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "ws": "8.23.0"
+  }
+}

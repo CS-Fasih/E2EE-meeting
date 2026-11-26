@@ -1,0 +1,80 @@
+{
+  "name": "baithak-desktop",
+  "productName": "Baithak",
+  "version": "1.0.0",
+  "description": "Private, end-to-end encrypted video meetings. No accounts.",
+  "main": "main.js",
+  "author": "Baithak contributors",
+  "homepage": "https://github.com/CS-Fasih/E2EE-meeting",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "scripts": {
+    "copy-web": "node ../scripts/copy-web.cjs app",
+    "start": "npm run copy-web && electron .",
+    "dist:win": "npm run copy-web && electron-builder --win portable --x64 --publish never && node ../scripts/build-installer.cjs",
+    "dist:linux": "npm run copy-web && electron-builder --linux AppImage --x64"
+  },
+  "devDependencies": {
+    "electron": "45.5.0",
+    "electron-builder": "26.18.0",
+    "resedit": "3.1.1"
+  },
+  "build": {
+    "appId": "app.baithak.desktop",
+    "productName": "Baithak",
+    "copyright": "Copyright (c) 2026 CS-Fasih and Baithak contributors. Free for non-commercial use.",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "app/**/*",
+      "build/icon.png"
+    ],
+    "extraResources": [
+      {
+        "from": "../LICENSE",
+        "to": "LICENSE.txt"
+      }
+    ],
+    "asar": true,
+    "electronLanguages": [
+      "en-US"
+    ],
+    "protocols": [
+      {
+        "name": "Baithak meeting link",
+        "schemes": [
+          "baithak"
+        ]
+      }
+    ],
+    "afterPack": "./build/after-pack.cjs",
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "Baithak-${version}-portable.exe"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Network",
+      "icon": "build/icon-1024.png",
+      "artifactName": "Baithak-${version}-${arch}.AppImage"
+    }
+  }
+}

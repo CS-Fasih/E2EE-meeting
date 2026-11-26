@@ -1,0 +1,13 @@
+{
+  "name": "baithak",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Private, end-to-end encrypted video meetings. No accounts, no servers that can listen.",
+  "license": "SEE LICENSE IN LICENSE",
+  "scripts": {
+    "build:web": "npm --prefix web run build",
+    "relay": "node server/relay.js --port 8787 --web web/dist",
+    "test:e2e": "node tests/e2e.cjs",
+    "icons": "node scripts/make-icons.cjs"
+  }
+}
