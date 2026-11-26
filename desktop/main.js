@@ -1,4 +1,4 @@
-// Baithak for desktop.
+// Handshake for desktop.
 //
 // A small, locked-down Electron shell around the same web app. The app is
 // loaded from inside the package (never from the internet), renderer
@@ -23,7 +23,7 @@ const {
 } = require('electron');
 
 const SCHEME = 'app';
-const HOST = 'baithak';
+const HOST = 'handshake';
 const ORIGIN = `${SCHEME}://${HOST}`;
 const WEB_ROOT = path.join(__dirname, 'app');
 const ALLOWED_PERMISSIONS = new Set(['media', 'display-capture', 'clipboard-sanitized-write', 'fullscreen', 'speaker-selection']);
@@ -54,7 +54,7 @@ let pickResolver = null;
 let blockerId = null;
 
 function linkFromArgs(argv) {
-  return argv.find((a) => typeof a === 'string' && a.toLowerCase().startsWith('baithak://')) || null;
+  return argv.find((a) => typeof a === 'string' && a.toLowerCase().startsWith('handshake://')) || null;
 }
 
 function sendLink(link) {
@@ -81,9 +81,9 @@ app.on('open-url', (e, url) => {
 });
 
 if (process.defaultApp) {
-  if (process.argv.length >= 2) app.setAsDefaultProtocolClient('baithak', process.execPath, [path.resolve(process.argv[1])]);
+  if (process.argv.length >= 2) app.setAsDefaultProtocolClient('handshake', process.execPath, [path.resolve(process.argv[1])]);
 } else {
-  app.setAsDefaultProtocolClient('baithak');
+  app.setAsDefaultProtocolClient('handshake');
 }
 
 function isAppUrl(url) {
@@ -204,8 +204,8 @@ function createWindow() {
     height: 820,
     minWidth: 380,
     minHeight: 560,
-    title: 'Baithak',
-    backgroundColor: '#161a33',
+    title: 'Handshake',
+    backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     show: false,
     icon: path.join(__dirname, 'build', 'icon.png'),
@@ -246,7 +246,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  if (process.platform === 'win32') app.setAppUserModelId('app.baithak.desktop');
+  if (process.platform === 'win32') app.setAppUserModelId('app.handshake.desktop');
   protocol.handle(SCHEME, serve);
   lockDownSession(session.defaultSession);
   if (process.platform === 'darwin') {

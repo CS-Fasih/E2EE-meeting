@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="neel">#FF161A33</color>
-    <color name="icon_bg">#FF1E2446</color>
-    <style name="Theme.Baithak" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/neel</item>
-        <item name="android:colorPrimary">@color/neel</item>
-        <item name="android:colorAccent">#FFE6B43D</item>
-        <item name="android:statusBarColor">@color/neel</item>
-        <item name="android:navigationBarColor">@color/neel</item>
-        <item name="android:windowLightStatusBar">false</item>
+    <color name="app_bg">#FFFFFFFF</color>
+    <color name="brand">#FF0B57D0</color>
+    <color name="icon_bg">#FF0B57D0</color>
+    <style name="Theme.Handshake" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/app_bg</item>
+        <item name="android:colorPrimary">@color/brand</item>
+        <item name="android:colorAccent">@color/brand</item>
+        <item name="android:statusBarColor">@color/app_bg</item>
+        <item name="android:navigationBarColor">@color/app_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

@@ -1,15 +1,15 @@
-# How Baithak protects a meeting
+# How Handshake protects a meeting
 
-This document explains exactly what Baithak encrypts, what other parties can still see, and where the limits are. If you find a problem, please read [Reporting a vulnerability](#reporting-a-vulnerability) at the end.
+This document explains exactly what Handshake encrypts, what other parties can still see, and where the limits are. If you find a problem, please read [Reporting a vulnerability](#reporting-a-vulnerability) at the end.
 
 ## Summary
 
-- There is **no Baithak server**. Nobody operates a service that can see or record meetings.
+- There is **no Handshake server**. Nobody operates a service that can see or record meetings.
 - Every key comes from the **meeting code**, a random 120-bit secret made on the device that starts the meeting. The app never sends the code anywhere.
 - Devices find each other through **public relays** (Nostr relays, or your own). Everything sent through them is **sealed with AES-256-GCM** using a key derived from the code, so relays can neither read nor forge it.
 - Voice, video, chat and files travel **directly between devices** over WebRTC, protected by **DTLS-SRTP**. Because the connection offers (which carry the DTLS certificate fingerprints) were sealed with the meeting key, an outsider cannot insert themselves into the connection.
 - On top of that, **every encoded audio and video frame is encrypted again with AES-256-GCM** with a separate key for each direction of each connection.
-- Each connection shows a **safety number and pattern** derived from both sides' DTLS fingerprints. If both people see the same one, there is no one in the middle.
+- Each connection shows a **safety number** derived from both sides' DTLS fingerprints. If both people see the same one, there is no one in the middle.
 
 ## Keys
 
@@ -55,10 +55,10 @@ The sealed envelope is wrapped in an ephemeral Nostr event (kind 25051) signed w
 
 Anyone who has the code can ask to join. The waiting room (on by default for meetings you start) means the host decides who gets in, and every participant only accepts connections from people the host admitted. The host can lock the meeting or remove someone. These rules are enforced by every participant's app; a modified app with the meeting code could still attempt to connect, which is why the code should be shared privately and the safety numbers checked for sensitive meetings.
 
-## Things Baithak does not protect against
+## Things Handshake does not protect against
 
 - **A compromised device.** Malware on your phone or computer can see the screen and hear the microphone.
-- **Someone you let in.** Participants can record with another device. Baithak shows when someone records with the app, but cannot stop other methods.
+- **Someone you let in.** Participants can record with another device. Handshake shows when someone records with the app, but cannot stop other methods.
 - **Metadata from IP addresses.** Use a VPN or Tor-routed network plus a TURN server in "Hide my IP address" mode if this matters.
 - **Large meetings.** Everyone connects to everyone (a mesh), so meetings are limited to 8 people. There is no media server, which is the point.
 - **A leaked code without the waiting room.** Turn the waiting room on and use a meeting password for sensitive calls.

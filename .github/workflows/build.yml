@@ -52,7 +52,7 @@ jobs:
         working-directory: desktop
       - uses: actions/upload-artifact@v4
         with:
-          name: baithak-windows
+          name: handshake-windows
           path: desktop/dist/*.exe
 
   android:
@@ -73,17 +73,17 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         if: env.KEYSTORE_B64 != ''
-        run: echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks" && echo "BAITHAK_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+        run: echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks" && echo "HANDSHAKE_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
       - name: Build APK
         working-directory: android
         env:
-          BAITHAK_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BAITHAK_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          BAITHAK_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          HANDSHAKE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          HANDSHAKE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          HANDSHAKE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleRelease
       - uses: actions/upload-artifact@v4
         with:
-          name: baithak-android
+          name: handshake-android
           path: android/app/build/outputs/apk/release/*.apk
 
   release:

@@ -1,4 +1,4 @@
-package app.baithak.android;
+package app.handshake.android;
 
 import android.Manifest;
 import android.app.Notification;
@@ -36,7 +36,7 @@ public class CallService extends Service {
         Notification n = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat_meeting)
                 .setContentTitle("You are in a meeting")
-                .setContentText("Tap to go back to Baithak")
+                .setContentText("Tap to go back to Handshake")
                 .setContentIntent(pi)
                 .setOngoing(true)
                 .setCategory(Notification.CATEGORY_CALL)

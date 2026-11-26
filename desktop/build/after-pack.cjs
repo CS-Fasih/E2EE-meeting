@@ -27,12 +27,12 @@ exports.default = async function afterPack(context) {
   vi.setStringValues(
     { lang: 1033, codepage: 1200 },
     {
-      CompanyName: 'Baithak contributors',
-      FileDescription: 'Baithak - private video meetings',
-      ProductName: 'Baithak',
-      InternalName: 'Baithak',
+      CompanyName: 'Handshake contributors',
+      FileDescription: 'Handshake - private video meetings',
+      ProductName: 'Handshake',
+      InternalName: 'Handshake',
       OriginalFilename: `${productFilename}.exe`,
-      LegalCopyright: 'Copyright (c) 2026 CS-Fasih and Baithak contributors. Non-commercial use only.',
+      LegalCopyright: 'Copyright (c) 2026 CS-Fasih and Handshake contributors. Non-commercial use only.',
       FileVersion: version,
       ProductVersion: version,
     },

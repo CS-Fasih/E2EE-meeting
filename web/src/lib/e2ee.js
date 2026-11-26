@@ -16,7 +16,7 @@ export function frameEncryptionMode() {
 
 function getWorker() {
   if (!worker) {
-    worker = new Worker(new URL('./frame-worker.js', import.meta.url), { type: 'module', name: 'baithak-frames' });
+    worker = new Worker(new URL('./frame-worker.js', import.meta.url), { type: 'module', name: 'handshake-frames' });
     worker.onmessage = (e) => {
       const msg = e.data;
       if (msg && msg.type === 'stats') {

@@ -7,24 +7,19 @@ const { chromium } = require('playwright');
 
 const root = path.join(__dirname, '..');
 
-// Arch doorway with a lattice (jaali) inside and a turmeric eight-point star.
+// Handshake symbol (Material Symbols, Apache 2.0) in white on the brand blue.
+const HANDSHAKE = require('node:fs')
+  .readFileSync(path.join(root, 'web', 'node_modules', '@material-symbols', 'svg-400', 'rounded', 'handshake-fill.svg'), 'utf8')
+  .match(/ d="([^"]+)"/)[1];
+
 function iconSvg({ rounded = true } = {}) {
-  const lattice = [];
-  for (let x = 300; x <= 724; x += 53) lattice.push(`M${x} 300V860`);
-  for (let y = 380; y <= 860; y += 53) lattice.push(`M300 ${y}H724`);
+  // Glyph spans 960 units; draw it 600 units wide, centred in 1024.
+  const scale = 600 / 960;
+  const tx = (1024 - 600) / 2;
+  const ty = (1024 - 600) / 2 + 600;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <defs>
-    <clipPath id="arch"><path d="M292 868V470C292 330 410 236 512 196C614 236 732 330 732 470V868Z"/></clipPath>
-  </defs>
-  <rect width="1024" height="1024" rx="${rounded ? 228 : 0}" fill="#1e2446"/>
-  <path d="M292 868V470C292 330 410 236 512 196C614 236 732 330 732 470V868Z" fill="#161a33"/>
-  <g clip-path="url(#arch)" stroke="#2c356d" stroke-width="6" fill="none"><path d="${lattice.join('')}"/></g>
-  <path d="M292 868V470C292 330 410 236 512 196C614 236 732 330 732 470V868" fill="none" stroke="#f1efe6" stroke-width="40" stroke-linejoin="round" stroke-linecap="round"/>
-  <g fill="none" stroke="#e6b43d" stroke-width="30" stroke-linejoin="round">
-    <rect x="436" y="512" width="152" height="152"/>
-    <path d="M512 480 620 588 512 696 404 588Z"/>
-  </g>
-  <path d="M232 868H792" stroke="#f1efe6" stroke-width="40" stroke-linecap="round"/>
+  <rect width="1024" height="1024" rx="${rounded ? 232 : 0}" fill="#0b57d0"/>
+  <path fill="#ffffff" transform="translate(${tx} ${ty}) scale(${scale})" d="${HANDSHAKE}"/>
 </svg>`;
 }
 

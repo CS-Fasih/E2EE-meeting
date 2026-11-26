@@ -66,7 +66,7 @@ export class Peer extends EventTarget {
     if (this.frameMode === 'legacy') config.encodedInsertableStreams = true;
     const pc = (this.pc = new RTCPeerConnection(config));
 
-    this.dc = pc.createDataChannel('baithak', { negotiated: true, id: 0, ordered: true });
+    this.dc = pc.createDataChannel('handshake', { negotiated: true, id: 0, ordered: true });
     this.dc.binaryType = 'arraybuffer';
     this.dc.bufferedAmountLowThreshold = 256 * 1024;
     this.dc.onopen = () => this._emit('open');

@@ -10,7 +10,7 @@ try {
   version = ipcRenderer.sendSync('app-version');
 } catch {}
 
-contextBridge.exposeInMainWorld('baithakNative', {
+contextBridge.exposeInMainWorld('handshakeNative', {
   kind: 'desktop',
   version,
   onPickSource(fn) {

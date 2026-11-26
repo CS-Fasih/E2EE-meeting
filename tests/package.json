@@ -1,5 +1,5 @@
 {
-  "name": "baithak-tests",
+  "name": "handshake-tests",
   "private": true,
   "description": "Browser tests: three real Chromium instances, a local relay and fake cameras.",
   "scripts": {

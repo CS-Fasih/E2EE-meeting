@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Baithak relay: a tiny, forward-only Nostr relay for ephemeral events.
+// Handshake relay: a tiny, forward-only Nostr relay for ephemeral events.
 //
 // It keeps nothing: no database, no logs of addresses or messages. An event
 // is checked, handed to whoever is subscribed right now, and forgotten.
-// Baithak clients only ever send sealed, end-to-end encrypted envelopes, so
+// Handshake clients only ever send sealed, end-to-end encrypted envelopes, so
 // the relay could not read them anyway.
 //
-// It can also serve the Baithak web app from a folder, so one process gives
+// It can also serve the Handshake web app from a folder, so one process gives
 // you a complete self-hosted setup:
 //
 //   node relay.js --port 8080 --web ../web/dist
@@ -59,18 +59,18 @@ const SECURITY_HEADERS = {
 };
 
 const INFO = {
-  name: 'Baithak relay',
+  name: 'Handshake relay',
   description: 'Forward-only relay for ephemeral events. Stores nothing.',
   supported_nips: [1, 11],
   software: 'https://github.com/CS-Fasih/E2EE-meeting',
-  version: '1.0.0',
+  version: '1.1.0',
   limitation: { max_message_length: MAX_EVENT, max_subscriptions: MAX_SUBS, payment_required: false, auth_required: false },
 };
 
 function serveStatic(req, res) {
   if (!WEB_DIR) {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', ...SECURITY_HEADERS });
-    res.end('Baithak relay is running. Use this address with wss:// in the app.\n');
+    res.end('Handshake relay is running. Use this address with wss:// in the app.\n');
     return;
   }
   const root = path.resolve(WEB_DIR);
@@ -240,7 +240,7 @@ const heartbeat = setInterval(() => {
 }, 30000);
 
 server.listen(PORT, HOST, () => {
-  console.log(`Baithak relay listening on ${HOST}:${PORT}${WEB_DIR ? `, serving ${path.resolve(WEB_DIR)}` : ''}`);
+  console.log(`Handshake relay listening on ${HOST}:${PORT}${WEB_DIR ? `, serving ${path.resolve(WEB_DIR)}` : ''}`);
 });
 
 for (const sig of ['SIGINT', 'SIGTERM']) {

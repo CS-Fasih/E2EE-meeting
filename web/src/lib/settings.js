@@ -2,12 +2,13 @@
 
 import { DEFAULT_RELAYS } from './relay.js';
 
-const KEY = 'baithak.settings.v1';
+const KEY = 'handshake.settings.v1';
 
 export const DEFAULT_STUN = ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'];
 
 export const DEFAULTS = {
   name: '',
+  theme: 'light',
   rememberName: true,
   micId: '',
   camId: '',
@@ -33,7 +34,7 @@ export const DEFAULTS = {
 
 function safeStorage() {
   try {
-    const k = '__baithak';
+    const k = '__handshake';
     localStorage.setItem(k, '1');
     localStorage.removeItem(k);
     return localStorage;

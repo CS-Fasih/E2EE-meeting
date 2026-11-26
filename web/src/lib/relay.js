@@ -1,6 +1,6 @@
 // Relay transport.
 //
-// Baithak does not run a server of its own. Signalling messages (who is in
+// Handshake does not run a server of its own. Signalling messages (who is in
 // the meeting, connection offers and answers) travel through Nostr relays as
 // short-lived "ephemeral" events that relays forward but do not store. Every
 // message is sealed with the meeting key before it leaves the device, so a

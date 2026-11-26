@@ -1,10 +1,10 @@
 {
-  "name": "baithak-desktop",
-  "productName": "Baithak",
-  "version": "1.0.0",
+  "name": "handshake-desktop",
+  "productName": "Handshake",
+  "version": "1.1.0",
   "description": "Private, end-to-end encrypted video meetings. No accounts.",
   "main": "main.js",
-  "author": "Baithak contributors",
+  "author": "Handshake contributors",
   "homepage": "https://github.com/CS-Fasih/E2EE-meeting",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
@@ -20,9 +20,9 @@
     "resedit": "3.1.1"
   },
   "build": {
-    "appId": "app.baithak.desktop",
-    "productName": "Baithak",
-    "copyright": "Copyright (c) 2026 CS-Fasih and Baithak contributors. Free for non-commercial use.",
+    "appId": "app.handshake.desktop",
+    "productName": "Handshake",
+    "copyright": "Copyright (c) 2026 CS-Fasih and Handshake contributors. Free for non-commercial use.",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -46,9 +46,9 @@
     ],
     "protocols": [
       {
-        "name": "Baithak meeting link",
+        "name": "Handshake meeting link",
         "schemes": [
-          "baithak"
+          "handshake"
         ]
       }
     ],
@@ -66,7 +66,7 @@
       "signAndEditExecutable": false
     },
     "portable": {
-      "artifactName": "Baithak-${version}-portable.exe"
+      "artifactName": "Handshake-${version}-portable.exe"
     },
     "linux": {
       "target": [
@@ -74,7 +74,7 @@
       ],
       "category": "Network",
       "icon": "build/icon-1024.png",
-      "artifactName": "Baithak-${version}-${arch}.AppImage"
+      "artifactName": "Handshake-${version}-${arch}.AppImage"
     }
   }
 }

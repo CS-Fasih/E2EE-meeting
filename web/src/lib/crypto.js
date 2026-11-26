@@ -1,4 +1,4 @@
-// Key handling for Baithak.
+// Key handling for Handshake.
 //
 // A meeting is identified by a random 120-bit secret, shown to people as a
 // 24-character code (Crockford base32, grouped in fours). Everything is
@@ -102,7 +102,7 @@ export function parseMeetingCode(input) {
   let text = String(input).trim();
   const hashAt = text.indexOf('#');
   if (hashAt >= 0) text = text.slice(hashAt + 1);
-  text = text.replace(/^join[=/]/i, '').replace(/^baithak:\/\/join\/?/i, '');
+  text = text.replace(/^join[=/]/i, '').replace(/^handshake:\/\/join\/?/i, '');
   const cleaned = text
     .toLowerCase()
     .replace(/[il]/g, '1')
@@ -127,7 +127,7 @@ async function hkdf(ikm, salt, info, length = 32) {
 async function stretchPassword(password, topic) {
   const key = await crypto.subtle.importKey('raw', te.encode(password.normalize('NFKC')), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt: te.encode('baithak/v1/password/' + topic), iterations: 600000 },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: te.encode('handshake/v1/password/' + topic), iterations: 600000 },
     key,
     256,
   );
@@ -142,7 +142,7 @@ export async function deriveMeeting(code, password = '') {
   const raw = code.replace(/-/g, '');
   const secret = base32decode(raw);
   if (secret.length < CODE_BYTES) throw new Error('bad code');
-  const topic = toHex(await hkdf(secret, 'baithak/v1', 'relay-topic', 16));
+  const topic = toHex(await hkdf(secret, 'handshake/v1', 'relay-topic', 16));
   let ikm = secret;
   if (password) {
     const pw = await stretchPassword(password, topic);
@@ -150,8 +150,8 @@ export async function deriveMeeting(code, password = '') {
     ikm.set(secret);
     ikm.set(pw, secret.length);
   }
-  const sigRaw = await hkdf(ikm, 'baithak/v1', 'signalling-key');
-  const frameKey = await hkdf(ikm, 'baithak/v1', 'frame-key');
+  const sigRaw = await hkdf(ikm, 'handshake/v1', 'signalling-key');
+  const frameKey = await hkdf(ikm, 'handshake/v1', 'frame-key');
   const sigKey = await crypto.subtle.importKey('raw', sigRaw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
   sigRaw.fill(0);
   return { code, topic, hasPassword: !!password, sigKey, frameKey };
@@ -159,10 +159,10 @@ export async function deriveMeeting(code, password = '') {
 
 /** Per-direction key for media frames, so each sender->receiver path has its own key. */
 export async function deriveFrameKey(frameKey, fromId, toId) {
-  return hkdf(frameKey, 'baithak/v1/frame', fromId + '>' + toId);
+  return hkdf(frameKey, 'handshake/v1/frame', fromId + '>' + toId);
 }
 
-const AAD_PREFIX = 'baithak/v1/signal/';
+const AAD_PREFIX = 'handshake/v1/signal/';
 
 /** Seals a JSON-able object for the meeting. Output is base64url text. */
 export async function seal(meeting, obj) {
@@ -203,7 +203,7 @@ export async function sha256(bytes) {
  */
 export async function safetyNumber(fpA, fpB) {
   const [x, y] = [fpA.toUpperCase(), fpB.toUpperCase()].sort();
-  const digest = await sha256(te.encode('baithak/v1/safety|' + x + '|' + y));
+  const digest = await sha256(te.encode('handshake/v1/safety|' + x + '|' + y));
   // 8 groups of 5 digits, each from 4 bytes of the hash (~133 bits total).
   const groups = [];
   const view = new DataView(digest.buffer);

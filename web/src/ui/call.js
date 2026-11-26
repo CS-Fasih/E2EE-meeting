@@ -10,6 +10,7 @@ import { peoplePanel } from './panel-people.js';
 import { chatPanel } from './panel-chat.js';
 import { securityPanel } from './panel-security.js';
 import { chime } from './sound.js';
+import { avatar, paintAvatar } from './avatar.js';
 
 const SPEAK_THRESHOLD = 0.018;
 
@@ -46,14 +47,13 @@ export function renderCall(root, app, meeting) {
   const secureBtn = h(
     'button',
     { class: 'secure-chip', type: 'button', onclick: () => togglePanel('security'), title: 'Encryption and safety numbers' },
-    icon('shield'),
-    h('span', { class: 'secure-text' }, 'Encrypted'),
+    icon('lock'),
+    h('span', { class: 'secure-text' }, 'End-to-end encrypted'),
   );
   const codeBtn = h(
     'button',
     { class: 'code-chip', type: 'button', title: 'Copy invite', onclick: () => copyInvite() },
     h('span', {}, meeting.code),
-    icon('copy'),
   );
 
   const btn = (name, label, onclick, cls = '') =>
@@ -67,12 +67,11 @@ export function renderCall(root, app, meeting) {
   const moreBtn = btn('more', 'More options', () => openMore());
   const leaveBtn = h(
     'button',
-    { class: 'ctl ctl-leave', type: 'button', 'aria-label': 'Leave meeting', title: 'Leave meeting', onclick: () => onLeave() },
+    { class: 'ctl ctl-leave', type: 'button', 'aria-label': 'Leave call', title: 'Leave call', onclick: () => onLeave() },
     icon('leave'),
-    h('span', { class: 'ctl-label' }, 'Leave'),
   );
 
-  const peopleCount = h('span', { class: 'count' }, '1');
+  const peopleCount = h('span', { class: 'count-badge' }, '1');
   const chatBadge = h('span', { class: 'badge', hidden: true });
   const peopleBtn = h(
     'button',
@@ -90,7 +89,7 @@ export function renderCall(root, app, meeting) {
   const bar = h(
     'footer',
     { class: 'callbar' },
-    h('div', { class: 'callbar-left' }, timeEl, codeBtn, secureBtn),
+    h('div', { class: 'callbar-left' }, timeEl, h('span', { class: 'bar-sep', 'aria-hidden': 'true' }), codeBtn, secureBtn),
     h('div', { class: 'callbar-center' }, micBtn, camBtn, screenBtn, handBtn, reactBtn, moreBtn, leaveBtn),
     h('div', { class: 'callbar-right' }, peopleBtn, chatBtn),
   );
@@ -143,11 +142,11 @@ export function renderCall(root, app, meeting) {
 
   // ---- invite ----
   function inviteText() {
-    const lines = ['Join my Baithak meeting.', '', 'Meeting code: ' + meeting.code];
+    const lines = ['Join my Handshake meeting.', '', 'Meeting code: ' + meeting.code];
     if (meeting.password) lines.push('It has a password. I will send it to you separately.');
     if (s.inviteBase) lines.push('', 'Join in your browser: ' + s.inviteBase.replace(/#.*$/, '') + '#' + meeting.code);
-    lines.push('Open in the app: baithak://join/' + meeting.code);
-    lines.push('', 'Get Baithak (free, no account): https://github.com/CS-Fasih/E2EE-meeting');
+    lines.push('Open in the app: handshake://join/' + meeting.code);
+    lines.push('', 'Get Handshake (free, no account): https://github.com/CS-Fasih/E2EE-meeting');
     return lines.join('\n');
   }
 
@@ -177,23 +176,24 @@ export function renderCall(root, app, meeting) {
   function makeTile(spec) {
     const video = h('video', { autoplay: true, playsinline: true, muted: true });
     video.muted = true;
-    const avatar = h('div', { class: 'tile-avatar' }, h('span', {}));
+    const circle = avatar('?', 'avatar avatar-tile');
+    const avatarBox = h('div', { class: 'tile-avatar' }, circle);
     const name = h('span', { class: 'tile-name' });
-    const micIco = h('span', { class: 'tile-mic', hidden: true }, icon('micOff'));
-    const hand = h('span', { class: 'tile-hand', hidden: true, title: 'Hand raised' }, icon('hand'));
+    const micIco = h('span', { class: 'tile-mic', hidden: true, title: 'Microphone off' }, icon('micOff'));
+    const hand = h('span', { class: 'tile-hand', hidden: true, title: 'Hand raised' }, icon('handFill'), h('span', {}, 'Hand raised'));
     const status = h('span', { class: 'tile-status', hidden: true });
     const pinBtn = h('button', { class: 'tile-pin', type: 'button', 'aria-label': 'Pin', title: 'Pin to the main view' }, icon('pin'));
     const el = h(
       'div',
       { class: 'tile' + (spec.slot === 'screen' ? ' tile-screen' : '') + (spec.self ? ' tile-self' : ''), 'data-key': spec.key },
       video,
-      avatar,
+      avatarBox,
       status,
-      h('div', { class: 'tile-label' }, micIco, name),
+      h('div', { class: 'tile-label' }, name),
+      h('div', { class: 'tile-corner' }, micIco, pinBtn),
       hand,
-      pinBtn,
     );
-    const tile = { ...spec, el, video, avatar, name, micIco, hand, status, pinBtn, track: null };
+    const tile = { ...spec, el, video, avatar: avatarBox, circle, name, micIco, hand, status, pinBtn, track: null };
     pinBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       pin(pinned === spec.key ? null : spec.key);
@@ -218,8 +218,8 @@ export function renderCall(root, app, meeting) {
       const track = media.get(tile.slot);
       setVideo(tile, track, !!track);
       tile.video.classList.toggle('mirrored', tile.slot === 'cam' && s.mirrorSelf);
-      tile.name.textContent = tile.slot === 'screen' ? 'Your screen' : meeting.name + ' (you)';
-      tile.avatar.firstChild.textContent = initials(meeting.name);
+      tile.name.textContent = tile.slot === 'screen' ? 'You are presenting' : 'You';
+      paintAvatar(tile.circle, meeting.name);
       tile.micIco.hidden = tile.slot === 'screen' || !!media.get('audio');
       tile.hand.hidden = tile.slot === 'screen' || !meeting.hand;
       tile.status.hidden = true;
@@ -227,14 +227,14 @@ export function renderCall(root, app, meeting) {
       const p = tile.p;
       const track = p.tracks[tile.slot];
       setVideo(tile, track, tile.slot === 'screen' ? p.state.screen : p.state.cam);
-      tile.name.textContent = tile.slot === 'screen' ? p.name + ' is presenting' : p.name;
-      tile.avatar.firstChild.textContent = initials(p.name);
+      tile.name.textContent = tile.slot === 'screen' ? p.name + ' (presenting)' : p.name;
+      paintAvatar(tile.circle, p.name);
       tile.micIco.hidden = tile.slot === 'screen' || p.state.mic;
       tile.hand.hidden = tile.slot === 'screen' || !p.state.hand;
       const connecting = p.status !== 'connected';
       const reconnecting = p.connectionState === 'disconnected' || p.connectionState === 'failed';
       tile.status.hidden = !(connecting || reconnecting);
-      tile.status.textContent = connecting ? 'Connecting' : 'Reconnecting';
+      tile.status.textContent = connecting ? 'Connecting…' : 'Reconnecting…';
     }
     tile.el.classList.toggle('pinned', pinned === tile.key);
   }
@@ -317,7 +317,7 @@ export function renderCall(root, app, meeting) {
     const L = currentLayout(list);
     stage.dataset.layout = L.mode;
     const alone = meeting.connected.length === 0;
-    emptyCard.hidden = !alone;
+    emptyCard.hidden = !alone || emptyCard.dataset.dismissed === '1';
     if (alone) paintEmpty();
 
     if (L.mode === 'spotlight') {
@@ -369,17 +369,21 @@ export function renderCall(root, app, meeting) {
     if (emptyCard.dataset.painted === meeting.phase) return;
     emptyCard.dataset.painted = meeting.phase;
     clear(emptyCard).append(
-      h('h2', {}, 'No one else is here yet'),
-      h('p', {}, 'Send the invite to the people you want to talk to. Only people with this code can find the meeting.'),
-      h('div', { class: 'empty-code' }, meeting.code),
       h(
         'div',
-        { class: 'empty-actions' },
-        h('button', { class: 'btn btn-primary', type: 'button', onclick: () => copyInvite() }, icon('copy'), h('span', {}, 'Copy invite')),
-        navigator.share || platform.kind === 'android'
-          ? h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => shareInvite() }, icon('share'), h('span', {}, 'Share'))
-          : null,
+        { class: 'empty-head' },
+        h('h2', {}, 'Your meeting is ready'),
+        h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Dismiss', onclick: () => (emptyCard.dataset.dismissed = '1', emptyCard.hidden = true) }, icon('close')),
       ),
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: () => shareInvite() }, icon('addPerson'), h('span', {}, 'Add others')),
+      h('p', {}, 'Or share this meeting code with the people you want in the meeting'),
+      h(
+        'div',
+        { class: 'code-copy' },
+        h('span', { class: 'code-copy-text' }, meeting.code),
+        h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Copy invite', title: 'Copy invite', onclick: () => copyInvite() }, icon('copy')),
+      ),
+      h('p', { class: 'empty-note' }, icon('lock'), h('span', {}, 'People who use this code must be let in by you, and the call is end-to-end encrypted.')),
     );
   }
 
@@ -550,7 +554,7 @@ export function renderCall(root, app, meeting) {
       meeting.setRecording(false);
       const blob = await r.stop();
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-      const where = await platform.saveFile(blob, `baithak-${stamp}.webm`);
+      const where = await platform.saveFile(blob, `handshake-${stamp}.webm`);
       toast(where ? 'Recording saved to this device.' : 'Could not save the recording.');
       return;
     }
@@ -628,10 +632,10 @@ export function renderCall(root, app, meeting) {
           h(
             'div',
             { class: 'notice notice-knock' },
-            h('div', { class: 'notice-avatar' }, initials(k.name)),
-            h('div', { class: 'notice-text' }, h('strong', {}, k.name), h('span', {}, 'wants to join')),
-            h('button', { class: 'btn btn-quiet btn-small', type: 'button', onclick: () => meeting.deny(k.id) }, 'Deny'),
-            h('button', { class: 'btn btn-primary btn-small', type: 'button', onclick: () => meeting.admit(k.id) }, 'Let in'),
+            avatar(k.name, 'avatar avatar-md'),
+            h('div', { class: 'notice-text' }, h('strong', {}, k.name), h('span', {}, 'wants to join this call')),
+            h('button', { class: 'btn btn-text btn-small', type: 'button', onclick: () => meeting.deny(k.id) }, 'Deny'),
+            h('button', { class: 'btn btn-primary btn-small', type: 'button', onclick: () => meeting.admit(k.id) }, 'Admit'),
           ),
         );
       }
@@ -641,7 +645,7 @@ export function renderCall(root, app, meeting) {
     if (recorders.length) {
       const who = recorders.length === 1 ? recorders[0] : recorders.slice(0, -1).join(', ') + ' and ' + recorders[recorders.length - 1];
       notices.appendChild(
-        h('div', { class: 'notice notice-rec' }, icon('record'), h('span', {}, `${who} ${recorders.length === 1 && who !== 'You' ? 'is' : 'are'} recording this meeting`)),
+        h('div', { class: 'notice notice-rec' }, h('span', { class: 'rec-dot' }), h('span', {}, `${who} ${recorders.length === 1 && who !== 'You' ? 'is' : 'are'} recording this meeting`)),
       );
     }
   }
@@ -824,7 +828,7 @@ export function renderCall(root, app, meeting) {
         const r = recorder;
         recorder = null;
         r.stop().then((blob) => {
-          if (blob.size) platform.saveFile(blob, `baithak-${Date.now()}.webm`);
+          if (blob.size) platform.saveFile(blob, `handshake-${Date.now()}.webm`);
         });
       }
       for (const t of tiles.values()) t.video.srcObject = null;

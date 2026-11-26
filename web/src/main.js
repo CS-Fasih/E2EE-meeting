@@ -3,13 +3,14 @@ import { h, clear } from './ui/dom.js';
 import { icon } from './ui/icons.js';
 import { dialog, toast, closeDialog } from './ui/overlay.js';
 import { renderHome } from './ui/home.js';
+import { renderPrejoin } from './ui/prejoin.js';
 import { renderCall } from './ui/call.js';
 import { openSettings } from './ui/settings-view.js';
 import { openAbout } from './ui/about.js';
 import { LocalMedia, LevelMeter } from './lib/media.js';
 import { Meeting } from './lib/meeting.js';
 import { loadSettings, saveSettings, iceServers } from './lib/settings.js';
-import { newMeetingCode, parseMeetingCode } from './lib/crypto.js';
+import { parseMeetingCode } from './lib/crypto.js';
 import { platform } from './lib/platform.js';
 
 const root = document.getElementById('app');
@@ -29,6 +30,9 @@ const app = {
   startMeeting,
   joinMeeting,
   leaveMeeting,
+  showHome,
+  showPrejoin,
+  applyTheme,
   applySpeaker() {
     document.querySelectorAll('audio').forEach((el) => el.setSinkId && el.setSinkId(settings.speakerId || '').catch(() => {}));
   },
@@ -36,21 +40,46 @@ const app = {
 
 platform.setSecureScreen(settings.secureScreen !== false);
 
+// Light by default; dark or "match the system" can be chosen in Settings.
+const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function applyTheme() {
+  const pref = settings.theme || 'light';
+  const dark = pref === 'dark' || (pref === 'system' && darkQuery && darkQuery.matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', dark ? '#1f1f1f' : '#ffffff');
+  platform.setDarkBars(dark);
+}
+applyTheme();
+if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', applyTheme);
+
 // Opt-in hook for automated tests only (set by the test harness on this device).
 try {
-  if (localStorage.getItem('baithak.debug') === '1') {
-    window.__baithak = app;
+  if (localStorage.getItem('handshake.debug') === '1') {
+    window.__handshake = app;
     import('./lib/e2ee.js').then((m) => (window.__frameStats = m.lastFrameStats));
   }
 } catch {}
 
 function showHome() {
   if (app.view && app.view.destroy) app.view.destroy();
+  closeDialog();
+  // The landing page never needs the camera or microphone.
+  media.stopAll();
   app.view = renderHome(root, app);
   platform.onBack(() => false);
-  // Turn devices on as they were last time, so the preview works right away.
-  if (settings.joinWithCam && !media.get('cam')) media.startCam().catch(() => {});
-  if (settings.joinWithMic && !media.get('audio')) media.startMic().catch(() => {});
+  return app.view;
+}
+
+function showPrejoin({ mode, code }) {
+  if (app.view && app.view.destroy) app.view.destroy();
+  closeDialog();
+  app.view = renderPrejoin(root, app, { mode, code });
+  platform.onBack(() => {
+    if (app.meeting) leaveMeeting();
+    else showHome();
+    return true;
+  });
   return app.view;
 }
 
@@ -73,14 +102,14 @@ async function begin({ code, name, password, isNew, lobby }) {
     },
   });
   app.meeting = m;
-  const home = app.view;
+  const home = app.view && app.view.isPrejoin ? app.view : showPrejoin({ mode: isNew ? 'new' : 'join', code });
   let entered = false;
 
   m.addEventListener('phase', (e) => {
     const phase = e.detail.phase;
     if (app.meeting !== m) return;
-    if (phase === 'searching') home.setStatus && home.setStatus('Looking for the meeting', () => leaveMeeting());
-    else if (phase === 'waiting') home.setStatus && home.setStatus('Asking to join. Someone in the meeting will let you in.', () => leaveMeeting());
+    if (phase === 'searching') home.setStatus(isNew ? 'Starting your meeting…' : 'Getting ready…', () => leaveMeeting());
+    else if (phase === 'waiting') home.setStatus('Asking to join…', () => leaveMeeting());
     else if (phase === 'in-call') {
       entered = true;
       enterCall(m);
@@ -96,8 +125,7 @@ async function begin({ code, name, password, isNew, lobby }) {
       ? 'That password does not match this meeting. Check it and try again.'
       : 'This meeting has a password. Enter it to join.';
     leaveMeeting(false, true);
-    const v = showHome();
-    v.setCode(code);
+    const v = showPrejoin({ mode: 'join', code });
     v.showPassword(msg);
   });
 
@@ -110,8 +138,8 @@ async function begin({ code, name, password, isNew, lobby }) {
   }
 }
 
-function startMeeting({ name, password, lobby }) {
-  begin({ code: newMeetingCode(), name, password, isNew: true, lobby });
+function startMeeting({ code, name, password, lobby }) {
+  begin({ code, name, password, isNew: true, lobby });
 }
 
 function joinMeeting({ code, name, password }) {
@@ -123,39 +151,6 @@ function enterCall(m) {
   closeDialog();
   app.view = renderCall(root, app, m);
   platform.setCallActive(true);
-  if (m.isNew) {
-    dialog({
-      title: 'Your meeting is ready',
-      body: h(
-        'div',
-        { class: 'ready' },
-        h('p', {}, 'Share this code with the people you want to meet. Anyone who has it can ask to join, so send it privately.'),
-        h('div', { class: 'code-box big' }, m.code),
-        m.password ? h('p', { class: 'muted' }, 'Send the password separately, for example by phone.') : null,
-      ),
-      actions: [
-        { label: 'Close' },
-        {
-          label: 'Copy invite',
-          kind: 'primary',
-          onClick: async () => {
-            const lines = [
-              'Join my Baithak meeting.',
-              '',
-              'Meeting code: ' + m.code,
-              m.password ? 'It has a password. I will send it to you separately.' : null,
-              settings.inviteBase ? 'Join in your browser: ' + settings.inviteBase + '#' + m.code : null,
-              'Open in the app: baithak://join/' + m.code,
-              '',
-              'Get Baithak (free, no account): https://github.com/CS-Fasih/E2EE-meeting',
-            ].filter((x) => x !== null);
-            const ok = await platform.copy(lines.join('\n'));
-            toast(ok ? 'Invite copied.' : 'Could not copy. Select the code and copy it yourself.');
-          },
-        },
-      ],
-    });
-  }
 }
 
 const END_TEXT = {
@@ -180,7 +175,7 @@ function endScreen(m, phase) {
     h(
       'div',
       { class: 'end-card' },
-      h('div', { class: 'end-arch', 'aria-hidden': 'true' }, icon('door', 'ico big')),
+      h('div', { class: 'end-icon', 'aria-hidden': 'true' }, icon('door', 'ico big')),
       h('h1', {}, title),
       text ? h('p', {}, text) : null,
       h('p', { class: 'muted' }, 'Nothing from this meeting was saved on this device.'),
@@ -190,14 +185,14 @@ function endScreen(m, phase) {
         canRejoin
           ? h(
               'button',
-              { class: 'btn btn-quiet', type: 'button', onclick: () => {
-                showHome();
+              { class: 'btn btn-outlined', type: 'button', onclick: () => {
+                showPrejoin({ mode: 'join', code: m.code });
                 joinMeeting({ code: m.code, name: m.name, password: m.password });
               } },
               phase === 'left' ? 'Rejoin' : 'Try again',
             )
           : null,
-        h('button', { class: 'btn btn-primary', type: 'button', onclick: () => showHome() }, 'Back to home'),
+        h('button', { class: 'btn btn-primary', type: 'button', onclick: () => showHome() }, 'Return to home screen'),
       ),
     ),
   );
@@ -211,7 +206,7 @@ function leaveMeeting(endForAll = false, silent = false) {
   else m.leave();
 }
 
-// Open links like baithak://join/<code> or https://host/#<code>.
+// Open links like handshake://join/<code> or https://host/#<code>.
 function openLink(link) {
   const code = parseMeetingCode(link);
   if (!code) return;
@@ -219,8 +214,7 @@ function openLink(link) {
     toast('Leave this meeting before joining another one.');
     return;
   }
-  const v = app.view && app.view.setCode ? app.view : showHome();
-  v.setCode(code);
+  showPrejoin({ mode: 'join', code });
 }
 
 showHome();
@@ -229,7 +223,7 @@ if (location.hash.length > 1) {
   const code = parseMeetingCode(location.hash);
   // Remove the code from the address bar and history right away.
   history.replaceState(null, '', location.pathname + location.search);
-  if (code) app.view.setCode(code);
+  if (code) showPrejoin({ mode: 'join', code });
 }
 
 // Desktop app: choose a screen or window to share.
@@ -265,7 +259,7 @@ platform.onPickSource((sources) => {
       'div',
       {},
       grid,
-      navigator.userAgent.includes('Windows') ? h('label', { class: 'check' }, audioBox, h('span', {}, 'Also share computer sound')) : null,
+      navigator.userAgent.includes('Windows') ? h('label', { class: 'check' }, audioBox, h('span', {}, 'Also share system audio')) : null,
     ),
     actions: [{ label: 'Cancel' }],
     onClose: () => {
@@ -280,7 +274,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (media.get('cam')) media.stopCam();
     if (media.get('audio')) media.stopMic();
-  } else if (app.view && app.view.setCode) {
+  } else if (app.view && app.view.isPrejoin) {
     if (settings.joinWithCam && !media.get('cam')) media.startCam().catch(() => {});
     if (settings.joinWithMic && !media.get('audio')) media.startMic().catch(() => {});
   }

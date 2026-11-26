@@ -5,7 +5,7 @@ import { platform } from '../lib/platform.js';
 export function openAbout() {
   const step = (title, text) => h('li', {}, h('strong', {}, title), h('p', {}, text));
   dialog({
-    title: 'How Baithak keeps a meeting private',
+    title: 'How Handshake keeps a meeting private',
     wide: true,
     body: h(
       'div',
@@ -31,13 +31,13 @@ export function openAbout() {
         ),
         step(
           'You can check',
-          'The Encryption panel shows a safety number and pattern for every connection. If both people see the same one, the connection is end to end.',
+          'The encryption panel shows a safety number for every connection. If both people see the same number, the connection is end to end.',
         ),
       ),
       h(
         'p',
         { class: 'muted' },
-        'What Baithak cannot hide: relays and STUN servers can see your IP address, and the people in the call can see it too unless you use a TURN server with "Hide my IP address". Anyone you give the code to can ask to join, so keep the waiting room on for meetings you start.',
+        'What Handshake cannot hide: relays and STUN servers can see your IP address, and the people in the call can see it too unless you use a TURN server with "Hide my IP address". Anyone you give the code to can ask to join, so keep the waiting room on for meetings you start.',
       ),
       h(
         'p',

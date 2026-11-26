@@ -1,25 +1,27 @@
 import { h, clear } from './dom.js';
 import { dialog, toast } from './overlay.js';
+import { icon } from './icons.js';
 import { listDevices } from '../lib/media.js';
 import { DEFAULT_RELAYS } from '../lib/relay.js';
 import { DEFAULT_STUN, validRelay } from '../lib/settings.js';
 import { platform } from '../lib/platform.js';
 
 const TABS = [
-  ['devices', 'Audio and video'],
-  ['privacy', 'Privacy'],
-  ['network', 'Network'],
+  ['devices', 'Audio and video', 'tune'],
+  ['appearance', 'Appearance', 'palette'],
+  ['privacy', 'Privacy', 'privacy'],
+  ['network', 'Network', 'network'],
 ];
 
 export function openSettings(app, start = 'devices') {
   const s = app.settings;
   const tabBar = h('div', { class: 'tabs', role: 'tablist' });
   const body = h('div', { class: 'tab-body' });
-  let current = start === 'network' || start === 'privacy' ? start : 'devices';
+  let current = TABS.some((t) => t[0] === start) ? start : 'devices';
 
   const paintTabs = () => {
     clear(tabBar);
-    for (const [id, label] of TABS) {
+    for (const [id, label, ic] of TABS) {
       tabBar.appendChild(
         h(
           'button',
@@ -34,20 +36,21 @@ export function openSettings(app, start = 'devices') {
               paint();
             },
           },
-          label,
+          icon(ic),
+          h('span', {}, label),
         ),
       );
     }
   };
 
   const toggle = (key, label, hint, after) => {
-    const box = h('input', { type: 'checkbox', checked: !!s[key] });
+    const box = h('input', { type: 'checkbox', role: 'switch', checked: !!s[key] });
     box.addEventListener('change', () => {
       s[key] = box.checked;
       app.save();
       if (after) after(box.checked);
     });
-    return h('label', { class: 'check' }, box, h('span', {}, h('span', {}, label), hint ? h('span', { class: 'hint' }, hint) : null));
+    return h('label', { class: 'switch-row' }, h('span', {}, h('strong', {}, label), hint ? h('span', { class: 'hint' }, hint) : null), box);
   };
 
   async function devices() {
@@ -92,24 +95,57 @@ export function openSettings(app, start = 'devices') {
       toggle('noiseSuppression', 'Reduce background noise', null, () => app.media.refresh()),
       toggle('echoCancellation', 'Cancel echo', 'Turn off only if you use headphones and want the most natural sound.', () => app.media.refresh()),
       toggle('autoGainControl', 'Adjust microphone volume automatically', null, () => app.media.refresh()),
-      toggle('mirrorSelf', 'Mirror my video', 'Only changes how you see yourself.'),
     );
     if (!d.mics.length && !d.cams.length) wrap.prepend(h('p', { class: 'muted' }, 'No camera or microphone found. Allow access to see your devices here.'));
     return wrap;
+  }
+
+  function appearance() {
+    const options = [
+      ['light', 'Light', 'light'],
+      ['dark', 'Dark', 'dark'],
+      ['system', 'Match system', 'devices'],
+    ];
+    const group = h('div', { class: 'theme-options', role: 'radiogroup', 'aria-label': 'Theme' });
+    const paintOptions = () => {
+      clear(group);
+      for (const [value, label, ic] of options) {
+        const selected = (s.theme || 'light') === value;
+        group.appendChild(
+          h(
+            'button',
+            {
+              class: 'theme-option' + (selected ? ' selected' : ''),
+              type: 'button',
+              role: 'radio',
+              'aria-checked': String(selected),
+              onclick: () => {
+                s.theme = value;
+                app.save();
+                app.applyTheme();
+                paintOptions();
+              },
+            },
+            h('span', { class: 'theme-swatch theme-' + value }, h('i'), h('i'), h('i')),
+            h('span', { class: 'theme-label' }, icon(ic), label),
+          ),
+        );
+      }
+    };
+    paintOptions();
+    return h(
+      'div',
+      { class: 'settings-grid' },
+      h('div', { class: 'field-group' }, h('span', { class: 'label' }, 'Theme'), group),
+      toggle('mirrorSelf', 'Mirror my video', 'Only changes how you see yourself.'),
+    );
   }
 
   function privacy() {
     return h(
       'div',
       { class: 'settings-grid' },
-      toggle('rememberName', 'Remember my name on this device', 'Nothing else is saved: no meetings, chats or contacts.', (on) => {
-        if (!on) {
-          const n = s.name;
-          s.name = '';
-          app.save();
-          s.name = n;
-        }
-      }),
+      toggle('rememberName', 'Remember my name on this device', 'Nothing else is saved: no meetings, chats or contacts.'),
       toggle('lobby', 'Ask before letting people into meetings I start', 'You decide who comes in, even if someone else gets hold of the code.'),
       toggle('frameEncryption', 'Encrypt every audio and video frame', 'A second layer on top of WebRTC encryption. Turn off only to troubleshoot calls with older browsers.'),
       toggle(
@@ -200,7 +236,8 @@ export function openSettings(app, start = 'devices') {
   async function paint() {
     const which = current;
     clear(body);
-    const node = which === 'devices' ? await devices() : which === 'privacy' ? privacy() : network();
+    const node =
+      which === 'devices' ? await devices() : which === 'appearance' ? appearance() : which === 'privacy' ? privacy() : network();
     if (which === current) {
       clear(body);
       body.appendChild(node);
@@ -209,5 +246,5 @@ export function openSettings(app, start = 'devices') {
 
   paintTabs();
   paint();
-  dialog({ title: 'Settings', body: h('div', { class: 'settings' }, tabBar, body), wide: true, actions: [{ label: 'Done', kind: 'primary' }] });
+  dialog({ title: 'Settings', body: h('div', { class: 'settings' }, tabBar, body), wide: true, actions: [] });
 }

@@ -1,6 +1,6 @@
 import { h, clear } from './dom.js';
 import { icon } from './icons.js';
-import { safetyGlyph } from './jaali.js';
+import { avatar } from './avatar.js';
 
 function fmtRate(bps) {
   if (!bps) return '0 kbps';
@@ -25,7 +25,7 @@ export function securityPanel(app, meeting) {
       h(
         'div',
         { class: 'sec-summary' },
-        icon('shield', 'ico big'),
+        icon('verified', 'ico big'),
         h(
           'div',
           {},
@@ -58,7 +58,7 @@ export function securityPanel(app, meeting) {
   }
 
   function card(p) {
-    const glyphBox = h('div', { class: 'glyph-box' });
+    const glyphBox = h('div', { class: 'glyph-box' }, avatar(p.name, 'avatar avatar-md'));
     const digits = h('div', { class: 'digits', 'aria-label': 'Safety number' });
     const path = h('dd', {}, '–');
     const quality = h('dd', {}, '–');
@@ -69,19 +69,11 @@ export function securityPanel(app, meeting) {
     const node = h(
       'section',
       { class: 'panel-section sec-card' },
-      h('h3', {}, p.name),
-      h(
-        'div',
-        { class: 'sec-compare' },
-        glyphBox,
-        h(
-          'div',
-          {},
-          digits,
-          h('p', { class: 'muted small' }, `Ask ${p.name} to open this panel. If the pattern and the numbers match on both screens, nobody is in between.`),
-          verifyBtn,
-        ),
-      ),
+      h('div', { class: 'sec-person' }, glyphBox, h('h3', {}, p.name)),
+      h('div', { class: 'sec-label' }, 'Safety number'),
+      digits,
+      h('p', { class: 'muted small' }, `Ask ${p.name} to open this panel. If the numbers match on both screens, nobody is listening in between.`),
+      verifyBtn,
       h(
         'dl',
         { class: 'sec-stats' },
@@ -102,16 +94,14 @@ export function securityPanel(app, meeting) {
     const key = p.safety ? p.safety.join('') : '';
     if (c.safetyKey !== key) {
       c.safetyKey = key;
-      clear(c.glyphBox);
       clear(c.digits);
       if (p.peer && p.peer.safety) {
-        c.glyphBox.appendChild(safetyGlyph(p.peer.safety.bytes, 64));
         p.safety.forEach((g) => c.digits.appendChild(h('span', {}, g)));
       } else {
         c.digits.appendChild(h('span', { class: 'muted' }, 'Waiting for the connection'));
       }
     }
-    clear(c.verifyBtn).append(icon(p.verified ? 'check' : 'shield'), h('span', {}, p.verified ? 'Verified. Undo' : 'Mark as verified'));
+    clear(c.verifyBtn).append(icon(p.verified ? 'check' : 'shield'), h('span', {}, p.verified ? 'Verified' : 'Mark as verified'));
     c.verifyBtn.classList.toggle('ok', p.verified);
   }
 

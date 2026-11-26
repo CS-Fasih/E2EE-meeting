@@ -2,6 +2,7 @@ import { h, clear, initials } from './dom.js';
 import { icon } from './icons.js';
 import { menu } from './overlay.js';
 import { platform } from '../lib/platform.js';
+import { avatar } from './avatar.js';
 
 export function peoplePanel(app, meeting, { onPin, copyInvite, shareInvite }) {
   const el = h('div', { class: 'panel-body people' });
@@ -15,8 +16,8 @@ export function peoplePanel(app, meeting, { onPin, copyInvite, shareInvite }) {
       h(
         'section',
         { class: 'panel-section' },
-        h('h3', {}, 'Invite people'),
-        h('p', { class: 'muted' }, 'Anyone with this code can ask to join. Share it only with people you trust.'),
+        h('h3', {}, 'Add people'),
+        h('p', { class: 'muted' }, 'Share the meeting code with people you trust. They can ask to join and you decide who gets in.'),
         h('div', { class: 'code-box' }, meeting.code),
         h(
           'div',
@@ -31,17 +32,17 @@ export function peoplePanel(app, meeting, { onPin, copyInvite, shareInvite }) {
 
     // Host controls
     if (meeting.isHost) {
-      const lobby = h('input', { type: 'checkbox', checked: meeting.room.lobby });
+      const lobby = h('input', { type: 'checkbox', role: 'switch', checked: meeting.room.lobby });
       lobby.addEventListener('change', () => meeting.setRoom({ lobby: lobby.checked }));
-      const locked = h('input', { type: 'checkbox', checked: meeting.room.locked });
+      const locked = h('input', { type: 'checkbox', role: 'switch', checked: meeting.room.locked });
       locked.addEventListener('change', () => meeting.setRoom({ locked: locked.checked }));
       el.appendChild(
         h(
           'section',
           { class: 'panel-section' },
-          h('h3', {}, 'You are the host'),
-          h('label', { class: 'check' }, lobby, h('span', {}, 'Ask me before letting people in')),
-          h('label', { class: 'check' }, locked, h('span', {}, 'Lock the meeting so no one else can join')),
+          h('h3', {}, 'Host controls'),
+          h('label', { class: 'switch-row' }, h('span', {}, h('strong', {}, 'Waiting room'), h('span', { class: 'hint' }, 'Admit each person before they join')), lobby),
+          h('label', { class: 'switch-row' }, h('span', {}, h('strong', {}, 'Lock meeting'), h('span', { class: 'hint' }, 'No one else can ask to join')), locked),
           meeting.connected.length
             ? h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => meeting.muteAll() }, icon('micOff'), h('span', {}, 'Turn off everyone’s microphone'))
             : null,
@@ -52,15 +53,15 @@ export function peoplePanel(app, meeting, { onPin, copyInvite, shareInvite }) {
           h(
             'section',
             { class: 'panel-section' },
-            h('h3', {}, 'Waiting to join'),
+            h('h3', {}, 'Waiting to be admitted'),
             [...meeting.knocks.values()].map((k) =>
               h(
                 'div',
                 { class: 'person' },
-                h('span', { class: 'person-avatar' }, initials(k.name)),
+                avatar(k.name, 'avatar avatar-sm'),
                 h('span', { class: 'person-name' }, k.name),
                 h('button', { class: 'btn btn-quiet btn-small', type: 'button', onclick: () => meeting.deny(k.id) }, 'Deny'),
-                h('button', { class: 'btn btn-primary btn-small', type: 'button', onclick: () => meeting.admit(k.id) }, 'Let in'),
+                h('button', { class: 'btn btn-primary btn-small', type: 'button', onclick: () => meeting.admit(k.id) }, 'Admit'),
               ),
             ),
           ),
@@ -76,8 +77,8 @@ export function peoplePanel(app, meeting, { onPin, copyInvite, shareInvite }) {
       h(
         'section',
         { class: 'panel-section' },
-        h('h3', {}, `In the meeting (${people.length + 1})`),
-        row({ self: true, name: meeting.name + ' (you)', mic: !!app.media.get('audio'), cam: !!app.media.get('cam'), hand: meeting.hand, host: meeting.isHost }),
+        h('h3', {}, `In the call (${people.length + 1})`),
+        row({ self: true, name: meeting.name + ' (You)', mic: !!app.media.get('audio'), cam: !!app.media.get('cam'), hand: meeting.hand, host: meeting.isHost }),
         people
           .sort((a, b) => a.joinedAt - b.joinedAt)
           .map((p) =>
@@ -118,7 +119,7 @@ export function peoplePanel(app, meeting, { onPin, copyInvite, shareInvite }) {
     return h(
       'div',
       { class: 'person' },
-      h('span', { class: 'person-avatar' }, initials(r.name)),
+      avatar(r.self ? meeting.name : r.name, 'avatar avatar-sm'),
       h(
         'span',
         { class: 'person-name' },

@@ -1,5 +1,5 @@
-# Self-hosted Baithak: relay plus the web app on one port.
-# Build from the repository root:  docker build -f server/Dockerfile -t baithak .
+# Self-hosted Handshake: relay plus the web app on one port.
+# Build from the repository root:  docker build -f server/Dockerfile -t handshake .
 FROM node:22-alpine AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./

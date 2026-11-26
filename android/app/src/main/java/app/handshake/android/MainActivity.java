@@ -1,4 +1,4 @@
-package app.baithak.android;
+package app.handshake.android;
 
 import android.Manifest;
 import android.app.Activity;
@@ -20,6 +20,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.View;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -47,7 +48,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Baithak for Android.
+ * Handshake for Android.
  *
  * The interface is the same web app as on desktop, bundled inside the APK
  * and served from a private https origin so camera and microphone work.
@@ -85,7 +86,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        prefs = getSharedPreferences("baithak", MODE_PRIVATE);
+        prefs = getSharedPreferences("handshake", MODE_PRIVATE);
         if (prefs.getBoolean("secure", true)) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         }
@@ -96,7 +97,7 @@ public class MainActivity extends Activity {
         CookieManager.getInstance().setAcceptCookie(false);
 
         web = new WebView(this);
-        web.setBackgroundColor(0xFF161A33);
+        web.setBackgroundColor(0xFFFFFFFF);
         web.setFitsSystemWindows(true);
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         setContentView(web);
@@ -114,7 +115,7 @@ public class MainActivity extends Activity {
         s.setSafeBrowsingEnabled(false);
         s.setSupportZoom(false);
 
-        web.addJavascriptInterface(new Bridge(), "BaithakAndroid");
+        web.addJavascriptInterface(new Bridge(), "HandshakeAndroid");
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
 
@@ -125,7 +126,7 @@ public class MainActivity extends Activity {
     private static String linkFrom(Intent intent) {
         if (intent == null || intent.getData() == null) return null;
         Uri data = intent.getData();
-        return "baithak".equals(data.getScheme()) ? data.toString() : null;
+        return "handshake".equals(data.getScheme()) ? data.toString() : null;
     }
 
     @Override
@@ -133,7 +134,7 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         String link = linkFrom(intent);
         if (link != null && web != null) {
-            web.evaluateJavascript("window.__baithakOpen && window.__baithakOpen(" + JSONObject.quote(link) + ")", null);
+            web.evaluateJavascript("window.__handshakeOpen && window.__handshakeOpen(" + JSONObject.quote(link) + ")", null);
         }
     }
 
@@ -144,7 +145,7 @@ public class MainActivity extends Activity {
             super.onBackPressed();
             return;
         }
-        web.evaluateJavascript("window.__baithakBack ? window.__baithakBack() : false", value -> {
+        web.evaluateJavascript("window.__handshakeBack ? window.__handshakeBack() : false", value -> {
             if (!"true".equals(value)) moveTaskToBack(true);
         });
     }
@@ -165,7 +166,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         stopService(new Intent(this, CallService.class));
         if (web != null) {
-            web.removeJavascriptInterface("BaithakAndroid");
+            web.removeJavascriptInterface("HandshakeAndroid");
             web.destroy();
             web = null;
         }
@@ -347,7 +348,7 @@ public class MainActivity extends Activity {
         public void copyText(String text) {
             runOnUiThread(() -> {
                 ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("Baithak invite", text));
+                if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("Handshake invite", text));
             });
         }
 
@@ -368,6 +369,11 @@ public class MainActivity extends Activity {
         public void openExternal(String url) {
             Uri u = Uri.parse(url);
             if ("https".equals(u.getScheme())) runOnUiThread(() -> MainActivity.this.openExternal(u));
+        }
+
+        @JavascriptInterface
+        public void setDarkBars(boolean dark) {
+            runOnUiThread(() -> applyBars(dark));
         }
 
         @JavascriptInterface
@@ -421,15 +427,15 @@ public class MainActivity extends Activity {
                     ContentValues v = new ContentValues();
                     v.put(MediaStore.Downloads.DISPLAY_NAME, safe);
                     v.put(MediaStore.Downloads.MIME_TYPE, mime == null || mime.isEmpty() ? "application/octet-stream" : mime);
-                    v.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Baithak");
+                    v.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Handshake");
                     v.put(MediaStore.Downloads.IS_PENDING, 1);
                     ContentResolver cr = getContentResolver();
                     save.uri = cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
                     if (save.uri == null) return "";
                     save.out = cr.openOutputStream(save.uri);
-                    save.label = "Downloads/Baithak/" + safe;
+                    save.label = "Downloads/Handshake/" + safe;
                 } else {
-                    File dir = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Baithak");
+                    File dir = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Handshake");
                     if (!dir.exists() && !dir.mkdirs()) return "";
                     File f = new File(dir, safe);
                     save.out = new FileOutputStream(f);
@@ -478,6 +484,27 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 return "";
             }
+        }
+    }
+
+    /** Status and navigation bars follow the app's light or dark theme. */
+    @SuppressWarnings("deprecation")
+    private void applyBars(boolean dark) {
+        int color = dark ? 0xFF1F1F1F : 0xFFFFFFFF;
+        getWindow().setStatusBarColor(color);
+        getWindow().setNavigationBarColor(color);
+        if (web != null) web.setBackgroundColor(color);
+        if (Build.VERSION.SDK_INT >= 30) {
+            WindowInsetsController c = getWindow().getInsetsController();
+            if (c != null) {
+                int mask = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                c.setSystemBarsAppearance(dark ? 0 : mask, mask);
+            }
+        } else {
+            View decor = getWindow().getDecorView();
+            int light = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            int flags = decor.getSystemUiVisibility();
+            decor.setSystemUiVisibility(dark ? (flags & ~light) : (flags | light));
         }
     }
 

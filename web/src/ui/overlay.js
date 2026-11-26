@@ -29,7 +29,8 @@ export function toast(text, opts = {}) {
       : null,
   );
   toastRoot.appendChild(node);
-  while (toastRoot.children.length > 4) toastRoot.firstChild.remove();
+  const max = window.innerWidth <= 720 ? 2 : 3;
+  while (toastRoot.children.length > max) toastRoot.firstChild.remove();
   setTimeout(() => node.remove(), opts.timeout || 4500);
   return node;
 }
@@ -92,8 +93,10 @@ export function dialog({ title, body, actions = [], wide = false, onClose, dismi
   backdrop.appendChild(box);
   document.body.appendChild(backdrop);
   document.addEventListener('keydown', onKey, true);
-  const focusable = box.querySelector('input, select, textarea, .dialog-actions .btn-primary, button');
-  if (focusable) setTimeout(() => focusable.focus(), 0);
+  // Focus the first field or the main action, never the close button.
+  const focusable = box.querySelector('.dialog-body input, .dialog-body select, .dialog-body textarea, .dialog-actions .btn-primary');
+  box.tabIndex = -1;
+  setTimeout(() => (focusable || box).focus(), 0);
   const api = { close, box };
   openDialog = api;
   return api;

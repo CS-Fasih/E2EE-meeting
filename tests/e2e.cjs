@@ -19,9 +19,9 @@ async function person(browser, name, extra = {}) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, permissions: ['camera', 'microphone'] });
   await ctx.addInitScript(
     ([relay, name, extra]) => {
-      localStorage.setItem('baithak.debug', '1');
+      localStorage.setItem('handshake.debug', '1');
       localStorage.setItem(
-        'baithak.settings.v1',
+        'handshake.settings.v1',
         JSON.stringify({ relays: [relay], stun: [], name, lobby: false, ...extra }),
       );
     },
@@ -56,26 +56,26 @@ async function person(browser, name, extra = {}) {
 }
 
 async function start(p, { password = '', lobby = false } = {}) {
-  if (password || lobby) {
-    await p.page.click('.options summary');
-    if (password) await p.page.fill('.options input[type=password]', password);
-    const box = p.page.locator('.options input[type=checkbox]');
-    if ((await box.isChecked()) !== lobby) await box.click();
-  }
-  await p.page.click('text=Start a meeting');
+  await p.page.click('text=New meeting');
+  await p.page.waitForSelector('.view-prejoin');
+  if (password) await p.page.fill('.pj-form input[type=password]', password);
+  const box = p.page.locator('.pj-form input[role=switch]');
+  if ((await box.isChecked()) !== lobby) await box.click();
+  const code = (await p.page.textContent('.pj-code-text')).trim();
+  await p.page.click('text=Start meeting');
   await p.page.waitForSelector('.view-call');
-  const code = (await p.page.textContent('.code-box.big')).trim();
-  await p.page.click('.dialog-actions >> text=Close');
   return code;
 }
 
 async function join(p, code, password = '') {
   await p.page.fill('#code', code);
+  await p.page.click('.join-form button[type=submit]');
+  await p.page.waitForSelector('.view-prejoin');
   if (password) {
     await p.page.click('text=This meeting has a password');
-    await p.page.fill('.join-form input[type=password]', password);
+    await p.page.fill('.pj-form input[type=password]', password);
   }
-  await p.page.click('.join-form button[type=submit]');
+  await p.page.click('text=Join now');
 }
 
 async function waitTiles(p, n, timeout = 30000) {
@@ -93,7 +93,7 @@ async function remoteVideoOk(p) {
 
 async function frameStats(p) {
   return p.page.evaluate(() => {
-    const m = window.__baithak.meeting;
+    const m = window.__handshake.meeting;
     return [...m.participants.values()].map((x) => ({
       name: x.name,
       e2ee: x.e2ee,
@@ -128,7 +128,7 @@ async function frameStats(p) {
   const a = await person(browser, 'Ayesha');
   const b = await person(browser, 'Bilal');
   const c = await person(browser, 'Chen');
-  const mode = await a.page.evaluate(() => window.__baithak.meeting === null && (window.RTCRtpScriptTransform ? 'script' : 'legacy'));
+  const mode = await a.page.evaluate(() => window.__handshake.meeting === null && (window.RTCRtpScriptTransform ? 'script' : 'legacy'));
   console.log('frame encryption API in this browser:', mode);
   if (SHOTS) await a.page.screenshot({ path: SHOTS + '/home.png' });
 
@@ -144,7 +144,7 @@ async function frameStats(p) {
   await check('everyone is connected to everyone', async () => {
     for (const p of [a, b, c]) {
       await p.page.waitForFunction(
-        () => [...window.__baithak.meeting.participants.values()].filter((x) => x.status === 'connected').length === 2,
+        () => [...window.__handshake.meeting.participants.values()].filter((x) => x.status === 'connected').length === 2,
         null,
         { timeout: 20000 },
       );
@@ -188,10 +188,10 @@ async function frameStats(p) {
 
   await check('chat reaches everyone', async () => {
     await a.page.click('.ctl[aria-label="Chat"]');
-    await a.page.fill('.chat-input', 'Salaam, sab theek?');
+    await a.page.fill('.chat-input', 'Hello everyone');
     await a.page.keyboard.press('Enter');
     for (const p of [b, c]) {
-      await p.page.waitForFunction(() => window.__baithak.meeting.chat.some((m) => m.text === 'Salaam, sab theek?'), null, { timeout: 5000 });
+      await p.page.waitForFunction(() => window.__handshake.meeting.chat.some((m) => m.text === 'Hello everyone'), null, { timeout: 5000 });
     }
   });
 
@@ -234,13 +234,13 @@ async function frameStats(p) {
   await check('file sharing works peer to peer', async () => {
     await c.page.evaluate(() => {
       const f = new File([new Uint8Array(200000).map((_, i) => i % 251)], 'notes.bin', { type: 'application/octet-stream' });
-      window.__baithak.meeting.shareFile(f);
+      window.__handshake.meeting.shareFile(f);
     });
-    await a.page.waitForFunction(() => window.__baithak.meeting.chat.some((m) => m.file && m.file.name === 'notes.bin'), null, { timeout: 5000 });
+    await a.page.waitForFunction(() => window.__handshake.meeting.chat.some((m) => m.file && m.file.name === 'notes.bin'), null, { timeout: 5000 });
     const got = await a.page.evaluate(
       () =>
         new Promise((resolve) => {
-          const m = window.__baithak.meeting;
+          const m = window.__handshake.meeting;
           const msg = m.chat.find((x) => x.file && x.file.name === 'notes.bin');
           m.addEventListener('file-progress', (e) => {
             if (e.detail.done) e.detail.blob.arrayBuffer().then((buf) => {
@@ -272,7 +272,7 @@ async function frameStats(p) {
       for (const p of [a, b, c]) {
         const info = await p.page.evaluate(() => ({
           tiles: [...document.querySelectorAll('.tile')].map((t) => t.dataset.key + '=' + t.textContent.trim()),
-          phase: window.__baithak.meeting && window.__baithak.meeting.phase,
+          phase: window.__handshake.meeting && window.__handshake.meeting.phase,
           menu: !!document.querySelector('.menu'),
           view: document.getElementById('app').className,
         }));
@@ -290,10 +290,10 @@ async function frameStats(p) {
   const code2 = await start(host, { lobby: true });
   await join(guest, code2);
   await check('guest waits until the host lets them in', async () => {
-    await guest.page.waitForSelector('text=Asking to join', { timeout: 12000 });
+    await guest.page.waitForSelector('text=Asking to join…', { timeout: 12000 });
     await host.page.waitForSelector('.notice-knock', { timeout: 12000 });
     if (SHOTS) await host.page.screenshot({ path: SHOTS + '/knock.png' });
-    await host.page.click('.notice-knock >> text=Let in');
+    await host.page.click('.notice-knock >> text=Admit');
     await waitTiles(guest, 2, 20000);
     await waitTiles(host, 2, 20000);
   });
@@ -302,14 +302,14 @@ async function frameStats(p) {
   // --- password ---
   const owner = await person(browser, 'Owner');
   const visitor = await person(browser, 'Visitor');
-  const code3 = await start(owner, { password: 'chai-at-four' });
+  const code3 = await start(owner, { password: 'tea-at-four' });
   await join(visitor, code3);
   await check('joining without the password asks for it', async () => {
     await visitor.page.waitForSelector('text=This meeting has a password. Enter it to join.', { timeout: 15000 });
   });
   await check('the right password gets in, with frame encryption', async () => {
-    await visitor.page.fill('.join-form input[type=password]', 'chai-at-four');
-    await visitor.page.click('.join-form button[type=submit]');
+    await visitor.page.fill('.pj-form input[type=password]', 'tea-at-four');
+    await visitor.page.click('text=Join now');
     await waitTiles(visitor, 2, 25000);
     await waitTiles(owner, 2, 25000);
     await sleep(2500);

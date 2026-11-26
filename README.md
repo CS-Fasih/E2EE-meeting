@@ -1,53 +1,55 @@
-<p align="center"><img src="docs/icon.png" width="96" alt=""></p>
+<p align="center"><img src="docs/icon.png" width="88" alt=""></p>
 
-<h1 align="center">Baithak</h1>
+<h1 align="center">Handshake</h1>
 
-<p align="center">Private video meetings, encrypted from your device to theirs.<br>No accounts. No servers that can listen. Free for non-commercial use.</p>
+<p align="center">Secure video meetings, end-to-end encrypted.<br>No accounts. No servers that can listen. Free for non-commercial use.</p>
 
-<p align="center"><img src="docs/screenshots/home.png" width="820" alt="Baithak home screen with camera preview inside an arch"></p>
+<p align="center"><img src="docs/screenshots/home.png" width="820" alt="Handshake start screen"></p>
 
-A *baithak* is the sitting room in South Asian homes where guests are received, a room you invite people into, with the door shut. This app tries to be that, online.
+## Features
 
-## What it does
-
-- **Group video calls** for up to 8 people, with screen sharing (including computer sound on Windows).
-- **End-to-end encrypted, twice.** WebRTC's DTLS-SRTP on every connection, plus AES-256-GCM on every single audio and video frame, with keys that only exist on the devices in the meeting.
-- **No accounts, no sign-up, no history.** Start a meeting, send the code, talk. Chat and files disappear when the meeting ends.
-- **No central server.** Devices connect directly. Public relays (or your own) only pass along sealed envelopes so devices can find each other.
-- **Verify who you are talking to.** Each connection shows a safety number and a lattice pattern. If both people see the same one, nobody is in the middle.
-- **Waiting room, lock, remove, mute.** The host decides who comes in. If the host leaves, the next person becomes host.
-- **Chat and file sharing** straight between devices (up to 512 MB per file).
-- **Raise hand, reactions, speaking indicator, grid and spotlight views, pin, picture in picture, full screen.**
+- **Group video calls** for up to 8 people, with screen sharing (including system audio on Windows).
+- **End-to-end encrypted, twice.** WebRTC's DTLS-SRTP on every connection, plus AES-256-GCM on every audio and video frame, with keys that exist only on the devices in the meeting.
+- **No account, no sign-up, no history.** Start a meeting, share the code, talk. Chat and files are gone when the meeting ends.
+- **No central server.** Devices connect directly to each other. Relays only pass sealed envelopes so devices can find each other.
+- **Verify the connection.** Each connection shows a safety number. If both people see the same number, nobody is in the middle.
+- **Host controls:** waiting room, lock meeting, remove participants, turn off microphones. If the host leaves, the next person becomes host.
+- **Chat and file sharing** directly between devices (up to 512 MB per file).
+- **Raise hand, reactions, active speaker highlight, grid and spotlight layouts, pin, picture-in-picture, full screen.**
 - **Local recording** that saves only to your device, with a notice shown to everyone while it runs.
 - **Optional meeting password**, mixed into every key.
-- **Device settings**: microphone, camera, speaker, video quality, noise suppression, echo cancellation.
-- **Android extras**: blocks screenshots by default, keeps the call going in the background, speaker or earpiece.
+- **Light and dark themes**, device selection, noise suppression and echo cancellation.
+- **Android:** blocks screenshots by default, keeps calls running in the background, speaker or earpiece.
 - **Hide your IP address** from other participants by routing through your own TURN server.
 
 | | |
 |---|---|
-| <img src="docs/screenshots/encryption-panel.png" alt="Encryption panel with safety number"> | <img src="docs/screenshots/screen-share.png" alt="Screen sharing with chat open"> |
-| <img src="docs/screenshots/waiting-room.png" alt="Host letting someone in from the waiting room"> | <img src="docs/screenshots/phone-call.png" width="260" alt="Call on a phone"> |
+| <img src="docs/screenshots/prejoin.png" alt="Ready to join screen with camera preview"> | <img src="docs/screenshots/call.png" alt="Three-person call"> |
+| <img src="docs/screenshots/present-chat.png" alt="Screen sharing with chat"> | <img src="docs/screenshots/security.png" alt="Encryption panel with safety number"> |
+| <img src="docs/screenshots/people.png" alt="People panel with host controls"> | <img src="docs/screenshots/call-dark.png" alt="Dark theme"> |
 
-*Screenshots use the browser's built-in test camera, which is why the video is green.*
+<p align="center"><img src="docs/screenshots/phone-prejoin.png" width="240" alt="Android ready-to-join screen">&nbsp;&nbsp;<img src="docs/screenshots/phone-call.png" width="240" alt="Android call"></p>
+
+*Screenshots use a synthetic test camera.*
 
 ## Download
 
 | Platform | File | Notes |
 |---|---|---|
-| Windows 10/11 (64-bit) | `Baithak-Setup-1.0.0.exe` | Installs for your user only, no admin rights needed |
-| Windows, no install | `Baithak-1.0.0-portable.exe` | Run from anywhere, e.g. a USB stick |
-| Android 8.0+ | `Baithak-1.0.0.apk` | Allow "Install unknown apps" for your browser or file manager |
+| Windows 10/11 (64-bit) | `Handshake-Setup-1.1.0.exe` | Installs for your user only, no admin rights needed |
+| Windows, no install | `Handshake-1.1.0-portable.exe` | Runs from any folder or USB drive |
+| Android 8.0+ | `Handshake-1.1.0.apk` | Allow "Install unknown apps" for your browser or file manager |
 
 Get them from the [Releases page](https://github.com/CS-Fasih/E2EE-meeting/releases), or build them yourself (below). The Windows builds are not code-signed, so SmartScreen may warn the first time: choose **More info → Run anyway**.
 
 ## How to use it
 
-1. Open Baithak, type your name, and press **Start a meeting**.
-2. Press **Copy invite** and send it privately (WhatsApp, Signal, SMS). The code looks like `k7f2-9qxm-3bd0-wv8t-hp4c-ezr6`.
-3. The other person opens Baithak, pastes the code or the whole invite under **Have a code?**, and presses **Join**.
-4. If the waiting room is on (the default), you will see *"… wants to join"*. Press **Let in**.
-5. For sensitive calls, open the shield (**Encrypted**) at the bottom left and compare the safety number with each person by voice. If it matches, press **Mark as verified**.
+1. Open Handshake and click **New meeting**.
+2. Check your camera and microphone, enter your name and click **Start meeting**.
+3. Click **Add others** and send the invite privately (email, WhatsApp, Signal, SMS). The code looks like `k7f2-9qxm-3bd0-wv8t-hp4c-ezr6`.
+4. The other person opens Handshake, pastes the code or the invite into **Enter a code or link**, and clicks **Join**, then **Join now**.
+5. With the waiting room on (the default), you will see *"… wants to join this call"*. Click **Admit**.
+6. For sensitive calls, click **End-to-end encrypted** at the bottom left and compare the safety number with each person by voice. If it matches, click **Mark as verified**.
 
 Keyboard shortcuts on desktop: `Ctrl+D` microphone, `Ctrl+E` camera, `Ctrl+Alt+H` raise hand, `Ctrl+Alt+C` chat, `Ctrl+Alt+P` people, `?` all shortcuts.
 
@@ -78,8 +80,8 @@ node relay.js --port 8080 --web ../web/dist
 Or with Docker, from the repository root:
 
 ```bash
-docker build -f server/Dockerfile -t baithak .
-docker run -p 8080:8080 baithak
+docker build -f server/Dockerfile -t handshake .
+docker run -p 8080:8080 handshake
 ```
 
 Put it behind HTTPS (Caddy, nginx, Cloudflare Tunnel), then in the app open **Settings → Network → Relays** and replace the list with `wss://your-domain`. Everyone in a meeting needs at least one relay in common. The relay stores nothing and logs nothing; it only accepts short-lived events and forwards them.
@@ -94,13 +96,13 @@ You need Node.js 22. Everything starts from the web app:
 cd web && npm ci && npm run build      # → web/dist
 ```
 
-**Windows (.exe)** — builds on Windows, Linux or macOS. The installer step needs NSIS (`makensis`; on Ubuntu `sudo apt install nsis`).
+**Windows (.exe)**: builds on Windows, Linux or macOS. The installer step needs NSIS (`makensis`; on Ubuntu `sudo apt install nsis`).
 
 ```bash
 cd desktop && npm ci && npm run dist:win    # → desktop/dist/*.exe
 ```
 
-**Android (.apk)** — needs JDK 17+ and the Android SDK (platform 35).
+**Android (.apk)**: needs JDK 17+ and the Android SDK (platform 35).
 
 ```bash
 cd android && ./gradlew assembleRelease     # → android/app/build/outputs/apk/release/
@@ -111,13 +113,13 @@ To sign the APK, create `android/keystore.properties` (never commit it):
 ```properties
 storeFile=/path/to/your-release.jks
 storePassword=...
-keyAlias=baithak
+keyAlias=handshake
 keyPassword=...
 ```
 
-**Automatic builds** — `.github/workflows/build.yml` runs the browser tests and builds the Windows and Android apps on every push to `main`. When you publish a release on GitHub with a `v…` tag (for example `v1.0.1`), the same workflow attaches the `.exe` and `.apk` files to it. To have CI sign the APK with your key (so updates install over earlier versions), add these repository secrets: `ANDROID_KEYSTORE_BASE64` (the output of `base64 -w0 your-release.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Without them, CI signs with a debug key.
+**Automatic builds**: `.github/workflows/build.yml` runs the browser tests and builds the Windows and Android apps on every push. When you publish a release on GitHub with a `v…` tag (for example `v1.1.0`), the same workflow attaches the `.exe` and `.apk` files to it. To have CI sign the APK with your key (so updates install over earlier versions), add these repository secrets: `ANDROID_KEYSTORE_BASE64` (the output of `base64 -w0 your-release.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Without them, CI signs with a debug key.
 
-**Tests** — three real browsers, a local relay and fake cameras:
+**Tests**: three real browsers, a local relay and fake cameras:
 
 ```bash
 node server/relay.js --port 8787 --web web/dist &
@@ -131,28 +133,24 @@ The test checks that video flows between everyone, that every frame is sealed an
 ```
 web/       the app itself (plain JavaScript, no framework), used by every platform
   src/lib/   crypto, relay client, signalling, WebRTC peers, frame encryption, meeting logic
-  src/ui/    screens, panels, icons, the jaali safety pattern
+  src/ui/    screens, panels, dialogs, icons
 server/    optional self-hosted relay (forward-only, stores nothing) + Dockerfile
-desktop/   Electron shell for Windows (sandboxed, no Node in the page)
+desktop/   Electron shell for Windows (sandboxed, no Node.js in the page)
 android/   native Android shell (WebView, no third-party libraries)
 tests/     end-to-end browser tests
-scripts/   icon rendering, installer build, Urdu wordmark generator
+scripts/   icon rendering and installer build
 ```
 
-## Limits, honestly
+## Limits
 
 - Up to 8 people per meeting, because everyone connects to everyone. That is what keeps media off servers.
 - Android cannot share its screen: Android's WebView has no screen capture API. Android users can see others' screens.
 - Relays and STUN servers can see your IP address. See SECURITY.md for how to reduce this.
 - Some networks block direct connections. Without a TURN server, those calls will not connect.
-- This is new software and has not had an independent security audit.
-
-## Roman Urdu mein
-
-Baithak ek private video meeting app hai. Koi account nahi chahiye. "Start a meeting" dabayen, code copy karke jinko bulana hai unhein bhejein, wo code paste karke "Join" karein. Awaaz, video, chat aur files aap ke device par hi encrypt hoti hain aur sirf meeting ke logon ke device par khulti hain — beech mein koi server nahi sun sakta. Group call (8 log tak), screen sharing, waiting room, password, chat, file sharing, hand raise aur recording sab mojood hain. Shield wale button par safety number dono taraf match karein to yaqeen ho jata hai ke beech mein koi nahi.
+- This software has not had an independent security audit.
 
 ## License
 
-[PolyForm Noncommercial License 1.0.0](LICENSE). You may use, copy, change and share Baithak for any **non-commercial** purpose: personal use, study, research, hobby projects, charities, schools and public institutions. **Commercial use is not allowed** without separate permission from the copyright holder.
+[PolyForm Noncommercial License 1.0.0](LICENSE). You may use, copy, change and share Handshake for any **non-commercial** purpose: personal use, study, research, hobby projects, charities, schools and public institutions. **Commercial use is not allowed** without separate permission from the copyright holder.
 
-Bundled third-party parts keep their own licenses: Atkinson Hyperlegible Next and Noto Nastaliq Urdu (SIL Open Font License 1.1), `@noble/curves` and `@noble/hashes` (MIT), Electron (MIT).
+Bundled third-party parts keep their own licenses: Inter (SIL Open Font License 1.1), Material Symbols (Apache License 2.0), `@noble/curves` and `@noble/hashes` (MIT), Electron (MIT). Full texts are in `web/public/third-party-licenses.txt`.

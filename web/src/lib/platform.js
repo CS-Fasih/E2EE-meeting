@@ -1,7 +1,7 @@
 // Small differences between the browser, the desktop app and the Android app.
 
-const desktop = typeof window !== 'undefined' ? window.baithakNative : null;
-const android = typeof window !== 'undefined' ? window.BaithakAndroid : null;
+const desktop = typeof window !== 'undefined' ? window.handshakeNative : null;
+const android = typeof window !== 'undefined' ? window.HandshakeAndroid : null;
 
 export const platform = {
   kind: desktop ? 'desktop' : android ? 'android' : 'web',
@@ -88,6 +88,10 @@ export const platform = {
     if (desktop && desktop.setCallActive) desktop.setCallActive(!!on);
   },
 
+  setDarkBars(dark) {
+    if (android && android.setDarkBars) android.setDarkBars(!!dark);
+  },
+
   setSecureScreen(on) {
     if (android && android.setSecureScreen) android.setSecureScreen(!!on);
   },
@@ -109,10 +113,10 @@ export const platform = {
     if (desktop && desktop.pickSource) desktop.pickSource(id, !!audio);
   },
 
-  /** Meeting links opened from outside the app (baithak://join/...). */
+  /** Meeting links opened from outside the app (handshake://join/...). */
   onOpenLink(fn) {
     if (desktop && desktop.onOpenLink) desktop.onOpenLink(fn);
-    window.__baithakOpen = (link) => fn(String(link || ''));
+    window.__handshakeOpen = (link) => fn(String(link || ''));
     if (android && android.initialLink) {
       const link = android.initialLink();
       if (link) setTimeout(() => fn(link), 0);
@@ -121,7 +125,7 @@ export const platform = {
 
   /** Android back button: return true when the app handled it. */
   onBack(fn) {
-    window.__baithakBack = () => !!fn();
+    window.__handshakeBack = () => !!fn();
   },
 
   openExternal(url) {
