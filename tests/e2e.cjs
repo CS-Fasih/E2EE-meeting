@@ -227,6 +227,16 @@ async function frameStats(p) {
     const vals = Object.values(stats);
     assert.ok(vals.some((v) => v.ok > 5 && v.failed === 0), 'screen frames not opened: ' + JSON.stringify(stats));
     if (SHOTS) await a.page.screenshot({ path: SHOTS + '/call-screen.png' });
+    // Viewers can zoom into the shared screen.
+    await a.page.hover('.stage-main .tile');
+    await a.page.click('.zoom-btn[aria-label="Zoom in"]');
+    await a.page.click('.zoom-btn[aria-label="Zoom in"]');
+    const zoom = await a.page.evaluate(() => ({
+      t: document.querySelector('.stage-main .tile video').style.transform,
+      level: document.querySelector('.zoom-level').textContent,
+    }));
+    assert.ok(/scale\(1\.56/.test(zoom.t) && zoom.level === '156%', 'zoom did not apply: ' + JSON.stringify(zoom));
+    await a.page.click('.zoom-level');
     await b.page.click('.ctl[aria-label="Stop presenting"]');
     await a.page.waitForFunction(() => !document.querySelector('.tile-screen'), null, { timeout: 8000 });
   });

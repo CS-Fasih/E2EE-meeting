@@ -12,6 +12,7 @@ import { securityPanel } from './panel-security.js';
 import { chime } from './sound.js';
 import { avatar, paintAvatar } from './avatar.js';
 import { measure, leave, haptic, reduced, EASE, dragToDismiss } from './motion.js';
+import { attachZoom } from './zoom.js';
 
 const SPEAK_THRESHOLD = 0.018;
 
@@ -241,6 +242,8 @@ export function renderCall(root, app, meeting) {
       hand,
     );
     const tile = { ...spec, el, video, avatar: avatarBox, circle, name, micIco, hand, status, pinBtn, track: null };
+    // People looking at someone else's screen can zoom in on small details.
+    if (spec.slot === 'screen' && !spec.self) tile.zoom = attachZoom(tile, () => el.parentNode === stageMain);
     if (!reduced()) {
       el.classList.add('tile-in');
       el.addEventListener('animationend', () => el.classList.remove('tile-in'), { once: true });
@@ -249,7 +252,10 @@ export function renderCall(root, app, meeting) {
       e.stopPropagation();
       pin(pinned === spec.key ? null : spec.key);
     });
-    el.addEventListener('dblclick', () => pin(pinned === spec.key ? null : spec.key));
+    el.addEventListener('dblclick', () => {
+      if (el.classList.contains('zoomable')) return;
+      pin(pinned === spec.key ? null : spec.key);
+    });
     return tile;
   }
 
@@ -382,6 +388,7 @@ export function renderCall(root, app, meeting) {
   }
 
   function retire(tile) {
+    if (tile.zoom) tile.zoom.destroy();
     const r = tile.el.getBoundingClientRect();
     const sr = stage.getBoundingClientRect();
     tile.el.classList.add('tile-leaving');
@@ -397,6 +404,11 @@ export function renderCall(root, app, meeting) {
   }
 
   function applyLayout() {
+    applyTiles();
+    for (const t of tiles.values()) if (t.zoom) t.zoom.apply();
+  }
+
+  function applyTiles() {
     const list = [...tiles.values()];
     const L = currentLayout(list);
     stage.dataset.layout = L.mode;
@@ -555,7 +567,12 @@ export function renderCall(root, app, meeting) {
     } else {
       try {
         await media.startScreen();
-        toast('You are presenting. Everyone in the meeting can see what you share.');
+        toast(
+          platform.kind === 'android'
+            ? 'You are presenting. Switch to the app you want to show. Handshake itself stays hidden from the share for privacy.'
+            : 'You are presenting. Everyone in the meeting can see what you share.',
+          { timeout: 7000 },
+        );
       } catch (err) {
         if (err && err.name !== 'NotAllowedError' && err.name !== 'AbortError') toast('Could not share the screen.', { kind: 'warn' });
       }
@@ -576,7 +593,7 @@ export function renderCall(root, app, meeting) {
 
   function openMore() {
     const cur = currentLayout([...tiles.values()]).mode;
-    const narrow = window.innerWidth <= 720;
+    const narrow = window.innerWidth <= 900;
     const items = [
       narrow ? { label: meeting.hand ? 'Lower hand' : 'Raise hand', icon: 'hand', run: () => meeting.setHand(!meeting.hand) } : null,
       narrow ? { label: 'Send a reaction', icon: 'smile', run: () => setTimeout(() => openReactions(moreBtn), 0) } : null,

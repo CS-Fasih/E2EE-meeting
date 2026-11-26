@@ -15,7 +15,7 @@ export function renderPrejoin(root, app, { mode, code }) {
   const isNew = mode === 'new';
   const meetingCode = code || newMeetingCode();
   clear(root);
-  root.className = 'view view-prejoin';
+  root.className = 'view view-prejoin' + (platform.isPhone ? ' is-phone' : '');
 
   // ---- preview ----
   const video = h('video', { class: 'pj-video' + (s.mirrorSelf ? ' mirrored' : ''), autoplay: true, muted: true, playsinline: true });
@@ -30,7 +30,7 @@ export function renderPrejoin(root, app, { mode, code }) {
   const flipBtn = h(
     'button',
     {
-      class: 'round-btn round-btn-sm pj-flip',
+      class: 'round-btn pj-flip',
       type: 'button',
       'aria-label': 'Switch camera',
       title: 'Switch camera',
@@ -53,8 +53,7 @@ export function renderPrejoin(root, app, { mode, code }) {
     placeholder,
     nameTag,
     levelBars,
-    h('div', { class: 'pj-controls' }, micBtn, camBtn),
-    flipBtn,
+    h('div', { class: 'pj-controls' }, micBtn, camBtn, flipBtn),
   );
 
   function paint() {
@@ -214,6 +213,23 @@ export function renderPrejoin(root, app, { mode, code }) {
     ? h('label', { class: 'switch-row' }, h('span', {}, h('strong', {}, 'Waiting room'), h('span', { class: 'hint' }, 'You admit each person before they can join.')), lobbyBox)
     : null;
 
+  // New meetings: waiting room and password, folded away on phones.
+  const optionsHint = h('span', { class: 'pj-options-hint' });
+  const paintHint = () => {
+    optionsHint.textContent = (lobbyBox.checked ? 'Waiting room on' : 'Waiting room off') + (pwInput.value ? ', password set' : '');
+  };
+  lobbyBox.addEventListener('change', paintHint);
+  pwInput.addEventListener('input', paintHint);
+  paintHint();
+  const options = isNew
+    ? h(
+        'details',
+        { class: 'pj-options', open: !platform.isPhone && window.innerHeight > 720 },
+        h('summary', {}, icon('tune'), h('span', { class: 'pj-options-title' }, 'Meeting options'), optionsHint, icon('chevron', 'ico chev')),
+        h('div', { class: 'pj-options-body' }, lobbyRow, pwRow),
+      )
+    : null;
+
   const error = h('p', { class: 'form-error', hidden: true, role: 'alert' });
   const goBtn = h('button', { class: 'btn btn-primary btn-lg pj-go', type: 'submit' }, isNew ? 'Start meeting' : 'Join now');
 
@@ -253,8 +269,7 @@ export function renderPrejoin(root, app, { mode, code }) {
     h('h1', {}, isNew ? 'Ready to start?' : 'Ready to join?'),
     codeChip,
     h('div', { class: 'field-group' }, h('label', { class: 'label', for: 'name' }, 'Your name'), nameInput),
-    lobbyRow,
-    pwRow,
+    options || pwRow,
     pwLink,
     error,
     goBtn,

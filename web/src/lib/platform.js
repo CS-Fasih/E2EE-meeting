@@ -7,7 +7,8 @@ export const platform = {
   kind: desktop ? 'desktop' : android ? 'android' : 'web',
 
   get canShareScreen() {
-    if (android) return false; // Android's WebView has no screen capture API
+    // Android: the app captures the screen natively (see android-screen.js).
+    if (android) return !!android.startScreenShare;
     return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
   },
 

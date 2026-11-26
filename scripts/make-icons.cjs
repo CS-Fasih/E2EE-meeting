@@ -65,6 +65,12 @@ function ico(pngs) {
   for (const size of sizes) pngs.push({ size, data: await render(svg, size) });
   fs.writeFileSync(path.join(root, 'desktop', 'build', 'icon.ico'), ico(pngs));
   fs.writeFileSync(path.join(root, 'web', 'public', 'icon-512.png'), await render(svg, 512));
+  // Linux: one PNG per standard size for menus and docks.
+  const linuxDir = path.join(root, 'desktop', 'build', 'icons');
+  fs.mkdirSync(linuxDir, { recursive: true });
+  for (const size of [16, 24, 32, 48, 64, 128, 256, 512, 1024]) {
+    fs.writeFileSync(path.join(linuxDir, `${size}x${size}.png`), await render(svg, size));
+  }
   fs.writeFileSync(path.join(root, 'docs', 'icon.png'), await render(svg, 256));
   await browser.close();
   console.log('icons written');

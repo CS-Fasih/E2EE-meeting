@@ -1,4 +1,6 @@
 // Local camera, microphone and screen.
+
+import { androidCanShare, startAndroidScreen, stopAndroidScreen } from './android-screen.js';
 //
 // Turning the camera or microphone off stops the device entirely (the
 // hardware light goes out); nothing keeps listening in the background.
@@ -162,10 +164,19 @@ export class LocalMedia extends EventTarget {
   }
 
   static canShareScreen() {
-    return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+    return androidCanShare() || !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
   }
 
   async startScreen() {
+    if (androidCanShare()) {
+      const track = await startAndroidScreen(() => {
+        if (this.tracks.screen === track) this.stopScreen();
+      });
+      this.androidScreen = true;
+      this._set('screen', track);
+      this._set('screenAudio', null);
+      return track;
+    }
     const s = await navigator.mediaDevices.getDisplayMedia({
       video: { frameRate: { ideal: 15, max: 30 }, width: { max: 1920 }, height: { max: 1080 } },
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
@@ -185,6 +196,10 @@ export class LocalMedia extends EventTarget {
   }
 
   stopScreen() {
+    if (this.androidScreen) {
+      this.androidScreen = false;
+      stopAndroidScreen();
+    }
     this._set('screen', null);
     this._set('screenAudio', null);
   }

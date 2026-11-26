@@ -15,6 +15,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
+import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -66,6 +67,7 @@ public class MainActivity extends Activity {
     private static final int REQ_MEDIA = 10;
     private static final int REQ_FILE = 11;
     private static final int REQ_NOTIFY = 12;
+    private static final int REQ_SCREEN = 13;
 
     private static final String CSP = "default-src 'self'; script-src 'self'; style-src 'self'; "
             + "img-src 'self' data: blob:; media-src 'self' blob: mediastream:; font-src 'self'; "
@@ -77,6 +79,7 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> fileCallback;
     private volatile String initialLink;
     private boolean inCall = false;
+    private volatile boolean sharing = false;
     private boolean askedNotifications = false;
     private SharedPreferences prefs;
     private final Map<String, Save> saves = new HashMap<>();
@@ -122,6 +125,18 @@ public class MainActivity extends Activity {
         float scale = getResources().getConfiguration().fontScale;
         s.setTextZoom(Math.round(100 * Math.max(0.9f, Math.min(scale, 1.15f))));
 
+        // Keep the call running smoothly while presenting another app.
+        web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
+        ScreenFrames.listener = (event, a, b) -> runOnUiThread(() -> {
+            if ("started".equals(event)) sharing = true;
+            if ("stopped".equals(event) || "denied".equals(event)) {
+                sharing = false;
+                refreshPip();
+            }
+            if (web != null) {
+                web.evaluateJavascript("window.__handshakeScreen && window.__handshakeScreen(" + JSONObject.quote(event) + "," + a + "," + b + ")", null);
+            }
+        });
         web.addJavascriptInterface(new Bridge(), "HandshakeAndroid");
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
@@ -172,9 +187,19 @@ public class MainActivity extends Activity {
     protected void onUserLeaveHint() {
         super.onUserLeaveHint();
         // Android 8-11: shrink the call into a floating window when leaving the app.
-        if (inCall && Build.VERSION.SDK_INT < 31) {
+        if (inCall && !sharing && Build.VERSION.SDK_INT < 31) {
             try {
                 enterPictureInPictureMode(pipParams(true));
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    /** No floating window while presenting: it would cover what is being shown. */
+    private void refreshPip() {
+        if (Build.VERSION.SDK_INT >= 31) {
+            try {
+                setPictureInPictureParams(pipParams(inCall && !sharing));
             } catch (Exception ignored) {
             }
         }
@@ -200,6 +225,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        ScreenFrames.listener = null;
         stopService(new Intent(this, CallService.class));
         if (web != null) {
             web.removeJavascriptInterface("HandshakeAndroid");
@@ -220,6 +246,17 @@ public class MainActivity extends Activity {
                 return blocked();
             }
             String path = url.getPath();
+            if ("/__screen/frame".equals(path)) {
+                // Newest screen frame for the page's own encrypted screen share. Memory only.
+                byte[] frame = ScreenFrames.latest;
+                WebResourceResponse r = new WebResourceResponse(frame == null ? "text/plain" : "image/jpeg", null,
+                        new ByteArrayInputStream(frame == null ? new byte[0] : frame));
+                if (frame == null) r.setStatusCodeAndReasonPhrase(204, "No frame");
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Cache-Control", "no-store");
+                r.setResponseHeaders(headers);
+                return r;
+            }
             if (path == null || path.equals("/") || path.isEmpty()) path = "/index.html";
             if (path.contains("..")) return blocked();
             try {
@@ -347,6 +384,16 @@ public class MainActivity extends Activity {
     @SuppressWarnings("deprecation")
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_SCREEN) {
+            if (resultCode == RESULT_OK && data != null && CallService.instance != null) {
+                sharing = true;
+                refreshPip();
+                CallService.instance.startScreen(resultCode, data);
+            } else {
+                ScreenFrames.emit("denied", 0, 0);
+            }
+            return;
+        }
         if (requestCode == REQ_FILE && fileCallback != null) {
             fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
             fileCallback = null;
@@ -408,6 +455,29 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void startScreenShare() {
+            runOnUiThread(() -> {
+                MediaProjectionManager mpm = getSystemService(MediaProjectionManager.class);
+                if (!inCall || mpm == null || CallService.instance == null) {
+                    ScreenFrames.emit("denied", 0, 0);
+                    return;
+                }
+                try {
+                    startActivityForResult(mpm.createScreenCaptureIntent(), REQ_SCREEN);
+                } catch (Exception e) {
+                    ScreenFrames.emit("denied", 0, 0);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void stopScreenShare() {
+            runOnUiThread(() -> {
+                if (CallService.instance != null) CallService.instance.stopScreen(false);
+            });
+        }
+
+        @JavascriptInterface
         public void haptic(String kind) {
             runOnUiThread(() -> {
                 if (web == null) return;
@@ -436,12 +506,8 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 inCall = on;
                 // Android 12+: go into a floating window automatically during calls.
-                if (Build.VERSION.SDK_INT >= 31) {
-                    try {
-                        setPictureInPictureParams(pipParams(on));
-                    } catch (Exception ignored) {
-                    }
-                }
+                refreshPip();
+                if (!on && CallService.instance != null) CallService.instance.stopScreen(false);
                 Intent svc = new Intent(MainActivity.this, CallService.class);
                 if (on) {
                     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

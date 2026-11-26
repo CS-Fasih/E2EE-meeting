@@ -8,7 +8,8 @@
 
 ## Features
 
-- **Group video calls** for up to 8 people, with screen sharing (including system audio on Windows).
+- **Group video calls** for up to 8 people, with screen sharing from Windows, Linux and Android (including system audio on Windows).
+- **Zoom into a shared screen:** + / − buttons, mouse wheel or pinch, drag to move around, double-click to toggle, full screen.
 - **End-to-end encrypted, twice.** WebRTC's DTLS-SRTP on every connection, plus AES-256-GCM on every audio and video frame, with keys that exist only on the devices in the meeting.
 - **No account, no sign-up, no history.** Start a meeting, share the code, talk. Chat and files are gone when the meeting ends.
 - **No central server.** Devices connect directly to each other. Relays only pass sealed envelopes so devices can find each other.
@@ -20,7 +21,7 @@
 - **Optional meeting password**, mixed into every key.
 - **Light and dark themes**, device selection, noise suppression and echo cancellation.
 - **Polished motion:** smooth screen transitions, touch ripples, tiles that glide into place as people join and leave, a speaking ring around avatars, bottom sheets you can swipe away on phones.
-- **Android:** an app-style phone layout, picture-in-picture during calls, front/back camera switch, haptic feedback, screenshot blocking by default, calls keep running in the background, speaker or earpiece.
+- **Android:** screen sharing, an app-style phone layout, picture-in-picture during calls, front/back camera switch, haptic feedback, screenshot blocking by default, calls keep running in the background, speaker or earpiece.
 - **Hide your IP address** from other participants by routing through your own TURN server.
 
 | | |
@@ -37,9 +38,11 @@
 
 | Platform | File | Notes |
 |---|---|---|
-| Windows 10/11 (64-bit) | `Handshake-Setup-1.2.0.exe` | Installs for your user only, no admin rights needed |
-| Windows, no install | `Handshake-1.2.0-portable.exe` | Runs from any folder or USB drive |
-| Android 8.0+ | `Handshake-1.2.0.apk` | Allow "Install unknown apps" for your browser or file manager |
+| Windows 10/11 (64-bit) | `Handshake-Setup-1.3.0.exe` | Installs for your user only, no admin rights needed |
+| Windows, no install | `Handshake-1.3.0-portable.exe` | Runs from any folder or USB drive |
+| Linux (Debian, Ubuntu, Mint, 64-bit) | `handshake_1.3.0_amd64.deb` | `sudo apt install ./handshake_1.3.0_amd64.deb` |
+| Linux (any distribution) | `Handshake-1.3.0-x86_64.AppImage` | `chmod +x` the file, then run it |
+| Android 8.0+ | `Handshake-1.3.0.apk` | Allow "Install unknown apps" for your browser or file manager |
 
 Get them from the [Releases page](https://github.com/CS-Fasih/E2EE-meeting/releases), or build them yourself (below). The Windows builds are not code-signed, so SmartScreen may warn the first time: choose **More info → Run anyway**.
 
@@ -103,6 +106,12 @@ cd web && npm ci && npm run build      # → web/dist
 cd desktop && npm ci && npm run dist:win    # → desktop/dist/*.exe
 ```
 
+**Linux (.deb and AppImage)**: builds on Linux.
+
+```bash
+cd desktop && npm ci && npm run dist:linux  # → desktop/dist/*.deb, *.AppImage
+```
+
 **Android (.apk)**: needs JDK 17+ and the Android SDK (platform 35).
 
 ```bash
@@ -118,7 +127,7 @@ keyAlias=handshake
 keyPassword=...
 ```
 
-**Automatic builds**: `.github/workflows/build.yml` runs the browser tests and builds the Windows and Android apps on every push. When you publish a release on GitHub with a `v…` tag (for example `v1.2.0`), the same workflow attaches the `.exe` and `.apk` files to it. To have CI sign the APK with your key (so updates install over earlier versions), add these repository secrets: `ANDROID_KEYSTORE_BASE64` (the output of `base64 -w0 your-release.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Without them, CI signs with a debug key.
+**Automatic builds**: `.github/workflows/build.yml` runs the browser tests and builds the Windows and Android apps on every push. When you publish a release on GitHub with a `v…` tag (for example `v1.3.0`), the same workflow attaches the `.exe` and `.apk` files to it. To have CI sign the APK with your key (so updates install over earlier versions), add these repository secrets: `ANDROID_KEYSTORE_BASE64` (the output of `base64 -w0 your-release.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Without them, CI signs with a debug key.
 
 **Tests**: three real browsers, a local relay and fake cameras:
 
@@ -136,7 +145,7 @@ web/       the app itself (plain JavaScript, no framework), used by every platfo
   src/lib/   crypto, relay client, signalling, WebRTC peers, frame encryption, meeting logic
   src/ui/    screens, panels, dialogs, icons
 server/    optional self-hosted relay (forward-only, stores nothing) + Dockerfile
-desktop/   Electron shell for Windows (sandboxed, no Node.js in the page)
+desktop/   Electron shell for Windows and Linux (sandboxed, no Node.js in the page)
 android/   native Android shell (WebView, no third-party libraries)
 tests/     end-to-end browser tests
 scripts/   icon rendering and installer build
@@ -145,7 +154,7 @@ scripts/   icon rendering and installer build
 ## Limits
 
 - Up to 8 people per meeting, because everyone connects to everyone. That is what keeps media off servers.
-- Android cannot share its screen: Android's WebView has no screen capture API. Android users can see others' screens.
+- Android shares the screen without sound, at about 10 frames per second, which suits documents and apps more than video.
 - Relays and STUN servers can see your IP address. See SECURITY.md for how to reduce this.
 - Some networks block direct connections. Without a TURN server, those calls will not connect.
 - This software has not had an independent security audit.

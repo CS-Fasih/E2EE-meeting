@@ -70,6 +70,7 @@ Anyone who has the code can ask to join. The waiting room (on by default for mee
 - Desktop: sandboxed renderer, context isolation, no Node.js in the page, spellchecker disabled (it would download dictionaries), only camera/microphone/screen permissions are ever granted.
 - Android: WebView usage metrics and Safe Browsing lookups turned off, cleartext traffic forbidden, backups disabled, screenshots blocked by default (can be turned off in Settings), and the camera and microphone are released whenever the app is in the background outside a meeting.
 - Chat and files are kept in memory only and erased when you leave.
+- Android screen sharing: Android's WebView cannot capture the screen, so the app does it natively with MediaProjection after the system's own consent dialog, inside the call's foreground service. Only the newest frame is kept, in memory, and handed to the app's own page through a private address that nothing else can load; from there it is encrypted and sent like any other video. Handshake's own window stays black in the share while screenshot blocking is on.
 
 ## Reporting a vulnerability
 

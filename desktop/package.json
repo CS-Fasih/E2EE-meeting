@@ -1,7 +1,7 @@
 {
   "name": "handshake-desktop",
   "productName": "Handshake",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Private, end-to-end encrypted video meetings. No accounts.",
   "main": "main.js",
   "author": "Handshake contributors",
@@ -12,7 +12,7 @@
     "copy-web": "node ../scripts/copy-web.cjs app",
     "start": "npm run copy-web && electron .",
     "dist:win": "npm run copy-web && electron-builder --win portable --x64 --publish never && node ../scripts/build-installer.cjs",
-    "dist:linux": "npm run copy-web && electron-builder --linux AppImage --x64"
+    "dist:linux": "npm run copy-web && electron-builder --linux deb AppImage --x64 --publish never"
   },
   "devDependencies": {
     "electron": "45.5.0",
@@ -70,11 +70,34 @@
     },
     "linux": {
       "target": [
-        "AppImage"
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "category": "Network",
-      "icon": "build/icon-1024.png",
-      "artifactName": "Handshake-${version}-${arch}.AppImage"
-    }
+      "icon": "build/icons",
+      "executableName": "handshake",
+      "maintainer": "CS-Fasih <132261661+CS-Fasih@users.noreply.github.com>",
+      "vendor": "Handshake contributors",
+      "synopsis": "Private, end-to-end encrypted video meetings",
+      "description": "Group video calls, screen sharing and chat, end-to-end encrypted, with no accounts and no central server.",
+      "artifactName": "Handshake-${version}-${arch}.${ext}"
+    },
+    "deb": {
+      "artifactName": "handshake_${version}_amd64.${ext}",
+      "packageCategory": "net",
+      "priority": "optional",
+      "packageName": "handshake"
+    },
+    "publish": null
   }
 }

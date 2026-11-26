@@ -63,7 +63,7 @@ const INFO = {
   description: 'Forward-only relay for ephemeral events. Stores nothing.',
   supported_nips: [1, 11],
   software: 'https://github.com/CS-Fasih/E2EE-meeting',
-  version: '1.2.0',
+  version: '1.3.0',
   limitation: { max_message_length: MAX_EVENT, max_subscriptions: MAX_SUBS, payment_required: false, auth_required: false },
 };
 
